@@ -1,0 +1,39 @@
+[project]
+name = "grf-muscle-model"
+version = "0.1.0"
+description = "Predicting lower-limb muscle forces and joint reaction forces from ground reaction forces using sequence models"
+readme = "README.md"
+requires-python = ">=3.11"
+
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "pandas",
+    "torch",
+    "optuna",
+    "scikit-learn",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "nbstripout",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["grf_pipeline_utils*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

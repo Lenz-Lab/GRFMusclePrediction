@@ -1,0 +1,61 @@
+# ── Data files ───────────────────────────────────────────────────────────────
+*.pkl
+*.pickle
+*.npz
+*.npy
+
+# OpenSim file types
+*.trc
+*.mot
+*.sto
+*.osim
+*.forces
+*.xml
+
+# ── Model weights ─────────────────────────────────────────────────────────────
+*.pth
+*.pt
+
+# Optuna database
+*.db
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Notebooks ─────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+# Uncomment the line below if you install nbstripout and want to strip
+# outputs before committing (recommended):
+# *.ipynb    # only if using nbstripout as a git hook
+
+# ── Environments ──────────────────────────────────────────────────────────────
+.env
+.venv/
+env/
+venv/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+
+# ── Outputs ───────────────────────────────────────────────────────────────────
+# Keep the results/figures/ folder but ignore generated files inside it
+results/figures/*.png
+results/figures/*.pdf
+results/figures/*.svg
+
+# Keep folder scaffolding
+!data/**/.gitkeep
+!data/**/README.md
+!results/**/.gitkeep
