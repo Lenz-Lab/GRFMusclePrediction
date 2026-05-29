@@ -2,12 +2,6 @@
 # Update these to match your local setup. All paths are relative to the repo
 # root unless they start with /. Use forward slashes on all platforms.
 paths:
-  # Root folder containing raw subject data for the Silder dataset
-  silder_data_root: data/Silder_Old_Young_Walkers/
-
-  # Root folder containing raw subject data for the Ulrich dataset
-  ulrich_data_root: data/Ulrich_Young_Walkers/
-
   # Where processed .pkl and .npz files are written
   processed_dir: data/processed/
 
@@ -17,26 +11,21 @@ paths:
   # Where test-set .npz files are written for cross-dataset evaluation
   test_data_dir: models/test_data/
 
-  # OpenSim results subdirectories (relative to each dataset's data root)
-  results:
-    scaling: Results/Scaling/
-    ik_raw: Results/IK/raw/
-    ik_filtered: Results/IK/filtered/
-    id_raw: Results/ID/raw/
-    id_filtered: Results/ID/filtered/
-    so: Results/SO/
-
-  # Generic OpenSim setup files (shared across datasets)
-  opensim_setup:
-    scale: generic_scale_setup.xml
-    ik: generic_ik_setup.xml
-    id: generic_id_setup.xml
-    external_loads: generic_externalLoads.xml
-    generic_model: Models/RajagopalModified_generic.osim
 
 
 # ── Silder dataset ────────────────────────────────────────────────────────────
 silder:
+  data_root: data/Silder_Data/
+  # OpenSim setup XMLs live at the top level of data_root alongside subject dirs
+  opensim_setup_dir: data/Silder_Data/
+  # Centralized results structure (relative to repo root)
+  results:
+    scaling: results/Silder/Scaling/
+    ik_raw: results/Silder/IK/raw/
+    ik_filtered: results/Silder/IK/filtered/
+    id_raw: results/Silder/ID/raw/
+    id_filtered: results/Silder/ID/filtered/
+    so: results/Silder/SO/
   OA_subjects: [1, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 17, 18, 19, 20, 22, 24, 25]
   Y_subjects:  [1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
   bad_subjects: [OA3, OA6, OA15, OA16, OA21, Y3]
@@ -53,6 +42,21 @@ silder:
 
 # ── Ulrich dataset ────────────────────────────────────────────────────────────
 ulrich:
+  data_root: data/Ulrich_Data/
+  # All paths below are relative to each subject's directory
+  # e.g. data/Ulrich_Data/Subject1/
+  subject_structure:
+    raw_grf: expmtldata/grf/
+    raw_markers: expmtldata/markerdata/
+    models: models/
+    scaling: Scaling/
+    ik: IK/
+    id: ID/
+    so: Sopt/
+    # Trial-level results always live in <result_type>/<trial_name>/output/
+    results_subdir: output/
+  # Note: setup XMLs live per-trial alongside output/ in each trial directory.
+  # Unlike Silder, there are no shared generic setup files across subjects.
   subject_ids: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   trial_names:
     - walking_baseline1

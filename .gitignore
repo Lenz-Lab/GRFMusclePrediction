@@ -3,6 +3,24 @@
 *.pickle
 *.npz
 *.npy
+*.anb
+*.anc
+*.trb
+*.prj
+*.jnt
+*.msl
+*.txt
+*.cal
+*.zip
+*.m
+*.png
+*.jpg
+*.vtp
+*.mat
+*.xlsx
+*.pdf
+data/processed/
+data/Silder_data/
 
 # OpenSim file types
 *.trc
