@@ -6,10 +6,10 @@ import re
 import numpy as np
 import pandas as pd
 
-def scale_generic(root_dir: str, mass: float, static_pose_filename: str):
+def scale_generic(root_dir: str, mass: float, static_pose_filename: str, scaling_dir: str):
     dir = root_dir
     os.chdir(dir)
-    subject_id = static_pose_filename.split('/transformed/')[1].split('_walk_static')[0]
+    subject_id = os.path.basename(static_pose_filename).split('_walk_static')[0]
     #scale generic model
     setup = 'generic_scale_setup.xml'
     scale_tool = osim.ScaleTool(setup)
@@ -25,35 +25,34 @@ def scale_generic(root_dir: str, mass: float, static_pose_filename: str):
     #access marker placer object and set inputs
     marker_placer = scale_tool.getMarkerPlacer()
     marker_placer.setStaticPoseFileName(static_pose_filename)
-    marker_placer.setOutputModelFileName(dir + f'/Results/Scaling/{subject_id}_scaled.osim')
+    marker_placer.setOutputModelFileName(os.path.join(scaling_dir, f'{subject_id}_scaled.osim'))
     scale_tool.run()
     del scale_tool
     gc.collect()
 
-def inverse_kinmatics(root_dir: str, tracking_data_filepath: str, model: osim.Model):
-    dir = root_dir
-    os.chdir(dir) 
-    after_trans = tracking_data_filepath.split('/transformed/')[1]
-    subj_trial_speed = after_trans.split('_transformed')[0]
-    #subj = subj_trial_speed.split('_')[0]
-    #run inverse kinematics
-    setup = 'generic_ik_setup.xml'
-    ik_tool = osim.InverseKinematicsTool(setup)
+def inverse_kinmatics(root_dir: str, tracking_data_filepath: str, model: osim.Model, 
+                      ik_raw_dir: str, ik_filtered_dir: str, setup_dir: str):
+    os.chdir(root_dir)
+    subj_trial_speed = os.path.basename(tracking_data_filepath).replace('_transformed.trc', '')
+    
+    ik_tool = osim.InverseKinematicsTool(os.path.join(setup_dir, 'generic_ik_setup.xml'))
     ik_tool.set_report_marker_locations(False)
     ik_tool.setModel(model)
     ik_tool.setMarkerDataFileName(tracking_data_filepath)
-    ik_tool.setOutputMotionFileName(f'Results/IK/raw/{subj_trial_speed}_ik.mot')
+    ik_tool.setOutputMotionFileName(os.path.join(ik_raw_dir, f'{subj_trial_speed}_ik.mot'))
     ik_tool.run()
-    #filter IK results
-    filter_ik(dir+ f'/Results/IK/raw/{subj_trial_speed}_ik.mot', dir + f'/Results/IK/filtered/{subj_trial_speed}_ik_filtered.mot')
+    
+    filter_ik(
+        os.path.join(ik_raw_dir, f'{subj_trial_speed}_ik.mot'),
+        os.path.join(ik_filtered_dir, f'{subj_trial_speed}_ik_filtered.mot')
+    )
     del ik_tool
     gc.collect()
-
+    
 def inverse_dynamics(root_dir: str, force_data_filepath: str, tracking_data_filepath:str, model: osim.Model):
     dir = root_dir
     os.chdir(dir)
-    after_trans =  tracking_data_filepath.split('/transformed/')[1]
-    subj_trial_speed = after_trans.split('_transformed')[0]
+    subj_trial_speed = os.path.basename(tracking_data_filepath).replace('_transformed.trc', '')
     sub = subj_trial_speed.split('_')[0]
     #plug proper grf data into external loads file
     loads = osim.ExternalLoads('generic_externalLoads.xml', True)

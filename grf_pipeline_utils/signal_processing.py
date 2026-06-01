@@ -2,6 +2,7 @@ from re import L
 import pandas as pd
 import numpy as np
 from scipy.signal import butter, filtfilt, find_peaks
+import os
 
 
 def lowpass_filter_df(df: pd.DataFrame, cutoff: float, fs: float, order: int = 2):
@@ -459,8 +460,7 @@ def preprocess_trc_grf(trc_ip: str, trc_op: str, markers_to_drop: list,  grf_ip:
     Also writes a new .mot file for the transformed force data after it is reformatted into L/R rather than plates 1-3
     """
     #parse output name for trial name
-    after_trans = trc_op.split('/transformed/')[1]
-    trial_name = after_trans.split('_transformed')[0]
+    trial_name = os.path.basename(trc_op).replace('_transformed.trc', '')
     #load data into dataframes
     heel_df = process_hjc_trc(trc_ip, trc_op, markers_to_drop)
     grf_df = process_grf(grf_ip)
