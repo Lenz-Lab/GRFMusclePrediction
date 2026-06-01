@@ -12,13 +12,13 @@
 *.txt
 *.cal
 *.zip
-*.m
 *.png
 *.jpg
 *.vtp
 *.mat
 *.xlsx
 *.pdf
+data/
 data/processed/
 data/Silder_data/
 

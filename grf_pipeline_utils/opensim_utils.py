@@ -48,29 +48,32 @@ def inverse_kinmatics(root_dir: str, tracking_data_filepath: str, model: osim.Mo
     )
     del ik_tool
     gc.collect()
-    
-def inverse_dynamics(root_dir: str, force_data_filepath: str, tracking_data_filepath:str, model: osim.Model):
-    dir = root_dir
-    os.chdir(dir)
+
+def inverse_dynamics(root_dir: str, force_data_filepath: str, tracking_data_filepath: str, 
+                     model: osim.Model, loads_dir: str, id_raw_dir: str, 
+                     id_filtered_dir: str, setup_dir: str):
+    os.chdir(root_dir)
     subj_trial_speed = os.path.basename(tracking_data_filepath).replace('_transformed.trc', '')
-    sub = subj_trial_speed.split('_')[0]
-    #plug proper grf data into external loads file
-    loads = osim.ExternalLoads('generic_externalLoads.xml', True)
+    
+    loads = osim.ExternalLoads(os.path.join(setup_dir, 'generic_externalLoads.xml'), True)
     loads.setDataFileName(force_data_filepath)
-    loads_path = os.path.join(dir, 'loads', f'{subj_trial_speed}_externalLoads.xml')
+    loads_path = os.path.join(loads_dir, f'{subj_trial_speed}_externalLoads.xml')
     loads.printToXML(loads_path)
-    #run inverse dynamics
-    id_tool = osim.InverseDynamicsTool('generic_id_setup.xml')
+    
+    id_tool = osim.InverseDynamicsTool(os.path.join(setup_dir, 'generic_id_setup.xml'))
     id_tool.setModel(model)
     id_tool.setExternalLoadsFileName(loads_path)
-    ik_file = os.path.join(dir, f'Results/IK/filtered/{subj_trial_speed}_ik_filtered.mot')
+    ik_file = os.path.join(id_raw_dir.replace('ID/raw', 'IK/filtered'), 
+                           f'{subj_trial_speed}_ik_filtered.mot')
     id_tool.setCoordinatesFileName(ik_file)
-    id_tool.set_results_directory(dir + '/Results/ID/raw/')
+    id_tool.set_results_directory(id_raw_dir)
     id_tool.setOutputGenForceFileName(f'{subj_trial_speed}_id.mot')
-    # id_tool.setStartTime(start_time)
-    # id_tool.setEndTime(end_time)
     id_tool.run()
-    filter_id(dir+f'Results/ID/raw/{subj_trial_speed}_id.mot', dir + f'/Results/ID/filtered/{subj_trial_speed}_id_filtered.mot')
+    
+    filter_id(
+        os.path.join(id_raw_dir, f'{subj_trial_speed}_id.mot'),
+        os.path.join(id_filtered_dir, f'{subj_trial_speed}_id_filtered.mot')
+    )
     del id_tool
     gc.collect()
 

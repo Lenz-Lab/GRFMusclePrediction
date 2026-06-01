@@ -21,8 +21,10 @@ silder:
   # Centralized results structure (relative to repo root)
   results:
     scaling: results/Silder/Scaling/
+    ik: results/Silder/IK/
     ik_raw: results/Silder/IK/raw/
     ik_filtered: results/Silder/IK/filtered/
+    loads: data/processed/Silder/loads/
     id_raw: results/Silder/ID/raw/
     id_filtered: results/Silder/ID/filtered/
     so: results/Silder/SO/
