@@ -19,7 +19,9 @@ silder:
   # OpenSim setup XMLs live at the top level of data_root alongside subject dirs
   opensim_setup_dir: data/Silder_Data/
   # Centralized results structure (relative to repo root)
-  results:
+  results: 
+    processed: data/processed/Silder/
+    transformed: data/processed/Silder/transformed/
     scaling: results/Silder/Scaling/
     ik: results/Silder/IK/
     ik_raw: results/Silder/IK/raw/

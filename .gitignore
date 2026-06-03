@@ -17,7 +17,8 @@
 *.vtp
 *.mat
 *.xlsx
-*.pdf
+*.
+results/
 data/
 data/processed/
 data/Silder_data/
