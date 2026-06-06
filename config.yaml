@@ -5,6 +5,9 @@ paths:
   # Where processed .pkl and .npz files are written
   processed_dir: data/processed/
 
+  # Where train/test/val splits are written
+  splits_dir: data/processed/splits/
+
   # Where trained model weights (.pth) and the Optuna database are stored
   model_dir: models/
 
@@ -46,19 +49,18 @@ silder:
 
 # ── Ulrich dataset ────────────────────────────────────────────────────────────
 ulrich:
-  data_root: data/Ulrich_Data/
+  data_root: data/Ulrich_Young_Walkers/
   # All paths below are relative to each subject's directory
   # e.g. data/Ulrich_Data/Subject1/
   subject_structure:
-    raw_grf: expmtldata/grf/
+    raw_grf: ExpmtlData/GRF/
     raw_markers: expmtldata/markerdata/
     models: models/
     scaling: Scaling/
     ik: IK/
     id: ID/
-    so: Sopt/
-    # Trial-level results always live in <result_type>/<trial_name>/output/
-    results_subdir: output/
+    so: StaticOpt/
+    
   # Note: setup XMLs live per-trial alongside output/ in each trial directory.
   # Unlike Silder, there are no shared generic setup files across subjects.
   subject_ids: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
