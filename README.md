@@ -15,7 +15,7 @@ The pipeline runs from raw motion capture and force plate data through OpenSim m
 ---
 
 ## Pipeline Overview
-'''mermaid
+```mermaid
 flowchart TD
     A[Raw marker + force plate data] --> B[OpenSim preprocessing\nScaling · IK · ID · Static Opt]
     B --> C[Gait cycle segmentation\nsignal_processing.py]
