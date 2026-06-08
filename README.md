@@ -8,14 +8,14 @@ Predicting lower-limb muscle forces and joint reaction forces from ground reacti
 
 ## Problem Statement
 
-Measuring muscle forces in vivo is invasive and impractical in clinical settings. Ground reaction forces, by contrast, are routinely measured with force plates and are increasingly accessible via instrumented insoles and walkways. This project trains sequence models to predict 37 lower-limb muscle forces and 6 joint reaction forces directly from GRF and center-of-pressure (COP) data collected during walking — enabling non-invasive estimation of internal musculoskeletal loading from externally measurable quantities.
+Measuring both muscle forces and joint contact forces in vivo is invasive and impractical in clinical settings. Ground reaction forces, by contrast, are routinely measured with force plates and are increasingly accessible via instrumented insoles and walkways. This project trains sequence models to predict 37 lower-limb muscle forces and 6 joint reaction forces directly from force plate quantities: ground reaction force and center of pressure. The goal of this project was enabling non-invasive estimation of internal musculoskeletal loading from externally measurable quantities.
 
 The pipeline runs from raw motion capture and force plate data through OpenSim musculoskeletal simulation (scaling, inverse kinematics, inverse dynamics, static optimization) to produce labeled training data, then trains and evaluates four sequence model architectures: LSTM, LSTM with multi-head attention, CNN-LSTM, and a Transformer encoder. Models are evaluated both within-dataset and cross-dataset to assess generalizability across populations and experimental conditions.
 
 ---
 
 ## Pipeline Overview
-
+'''mermaid
 flowchart TD
     A[Raw marker + force plate data] --> B[OpenSim preprocessing\nScaling · IK · ID · Static Opt]
     B --> C[Gait cycle segmentation\nsignal_processing.py]
@@ -75,7 +75,7 @@ data/Uhlrich_Data/SubjectX/
 ├── Scaling/                 ← scaling setup XML
 ├── IK/<trial>/output/       ← IK results
 ├── ID/<trial>/output/       ← ID results
-└── Sopt/<trial>/output/     ← static optimization results
+└── Sopt/<trial>/            ← static optimization results
 ```
 
 **Gait cycle segmentation** (see `notebooks/Ulrich_Batch_Processing.ipynb`):
