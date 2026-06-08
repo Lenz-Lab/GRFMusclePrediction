@@ -44,6 +44,8 @@ New datasets require preprocessing to produce the standard segment dictionary fo
 
 **Source:** Silder A, Heiderscheit B, Thelen DG. Active and passive contributions to joint kinetics during walking in older adults. *Journal of Biomechanics*, 41(7):1520–1527, 2008. https://doi.org/10.1016/j.jbiomech.2008.02.016
 
+**Data availability:** This dataset is not publicly available. Access may be requested from the original authors.
+
 This dataset contains motion capture and discrete force plate data from older adult (OA) and young adult (YA) walkers across three speeds (80%, 100%, and 120% of preferred walking speed), with five trials per speed per subject. Raw data consists of `.trc` marker files and `.forces` ground reaction force files.
 
 **Preprocessing pipeline** (see `notebooks/Silder_Preprocessing.ipynb` and `scripts/run_ik_batch.py`):
@@ -74,6 +76,8 @@ Outputs (44): [37 muscle forces] + knee_fx, knee_fy, knee_fz, ankle_fx, ankle_fy
 ### Uhlrich et al. (2022)
 
 **Source:** Uhlrich SD, Jackson RW, Seth A, Kolesar JA, Delp SL. Muscle coordination retraining inspired by musculoskeletal simulations reduces knee contact force. *Scientific Reports*, 12(1):9842, 2022. https://doi.org/10.1038/s41598-022-13386-9
+
+**Data availability:** Openly available via SimTK at https://simtk.org/projects/gait_retraining. Free registration required; users confirm non-commercial use upon access.
 
 This dataset contains 10 young adult subjects performing treadmill walking across multiple feedback and retention conditions. Unlike the Silder dataset, OpenSim results (scaling, IK, ID, static optimization) are provided precomputed per subject and per trial, organized as:
 
