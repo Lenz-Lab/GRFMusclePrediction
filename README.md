@@ -61,14 +61,14 @@ Outputs (44): [37 muscle forces] + knee_fx, knee_fy, knee_fz, ankle_fx, ankle_fy
 
 ---
 
-### Ulrich et al. (2022)
+### Uhlrich et al. (2022)
 
 **Source:** Uhlrich SD, Jackson RW, Seth A, Kolesar JA, Delp SL. Muscle coordination retraining inspired by musculoskeletal simulations reduces knee contact force. *Scientific Reports*, 12(1):9842, 2022. https://doi.org/10.1038/s41598-022-13386-9
 
 This dataset contains 10 young adult subjects performing treadmill walking across multiple feedback and retention conditions. Unlike the Silder dataset, OpenSim results (scaling, IK, ID, static optimization) are provided precomputed per subject and per trial, organized as:
 
 ```
-data/Ulrich_Data/SubjectX/
+data/Uhlrich_Data/SubjectX/
 ├── expmtldata/grf/          ← raw force plate data
 ├── expmtldata/markerdata/   ← raw marker files
 ├── models/                  ← generic and scaled .osim files
@@ -107,7 +107,7 @@ The pipeline is designed to be dataset-agnostic downstream of preprocessing. To 
 
 The full list of required output keys is defined in `config.yaml` under `signals.outputs`. Output key names must match exactly — they are used to align model inputs and outputs at evaluation time and are saved alongside test datasets as `output_keys` arrays in `.npz` files. During cross-dataset evaluation in `Compare_Models`, the notebook verifies that the test dataset's `output_keys` match the model's expected outputs before running inference, preventing silent shape mismatches.
 
-Add the new dataset's configuration (subject list, masses, trial names, directory structure) to `config.yaml` following the existing `silder` or `ulrich` sections, then add a corresponding preprocessing notebook to `notebooks/`.
+Add the new dataset's configuration (subject list, masses, trial names, directory structure) to `config.yaml` following the existing `silder` or `uhlrich` sections, then add a corresponding preprocessing notebook to `notebooks/`.
 
 ---
 
@@ -165,13 +165,13 @@ Configure paths and subject lists in `config.yaml`, then run notebooks in order:
 
 ```
 Silder_Preprocessing.ipynb          ← coordinate transforms, scaling, IK, ID
-scripts/run_ik_batch.py         ← batch IK for all Silder subjects
+scripts/run_ik_batch.py             ← batch IK for all Silder subjects
 scripts/Static Opt Scripts/Main_StaticOptimization_Silder.m  ← static optimization (MATLAB + OpenSim)
-Silder_Batch_Processing.ipynb  ← gait segmentation, normalization, filtering
-Ulrich_Batch_Processing.ipynb  ← same for Ulrich dataset
-Split_Multiple_Datasets.ipynb         ← train/val/test split
-Tune_Models.ipynb            ← Optuna hyperparameter search + final training
-Compare_Models.ipynb         ← evaluation and cross-dataset testing
+Silder_Batch_Processing.ipynb       ← gait segmentation, normalization, filtering
+Uhlrich_Batch_Processing.ipynb      ← same for Uhlrich dataset
+Split_Multiple_Datasets.ipynb       ← train/val/test split
+Tune_Models.ipynb                   ← Optuna hyperparameter search + final training
+Compare_Models.ipynb                ← evaluation and cross-dataset testing
 ```
 
 ### Running tests
@@ -189,5 +189,5 @@ If you use this code, please cite the datasets it was developed on:
 **Silder dataset:**
 Silder A, Heiderscheit B, Thelen DG. Active and passive contributions to joint kinetics during walking in older adults. *Journal of Biomechanics*, 41(7):1520–1527, 2008. https://doi.org/10.1016/j.jbiomech.2008.02.016
 
-**Ulrich / static optimization:**
+**Uhlrich / static optimization:**
 Uhlrich SD, Jackson RW, Seth A, Kolesar JA, Delp SL. Muscle coordination retraining inspired by musculoskeletal simulations reduces knee contact force. *Scientific Reports*, 12(1):9842, 2022. https://doi.org/10.1038/s41598-022-13386-9

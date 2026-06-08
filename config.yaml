@@ -47,9 +47,9 @@ silder:
   Y_masses:  [63, 85, 54, 60, 54, 83, 53, 62, 72, 65, 84, 83, 64, 59, 55, 73, 90, 75, 65, 68]
 
 
-# ── Ulrich dataset ────────────────────────────────────────────────────────────
-ulrich:
-  data_root: data/Ulrich_Young_Walkers/
+# ── Uhlrich dataset ────────────────────────────────────────────────────────────
+uhlrich:
+  data_root: data/Uhlrich_Young_Walkers/
   # All paths below are relative to each subject's directory
   # e.g. data/Ulrich_Data/Subject1/
   subject_structure:
