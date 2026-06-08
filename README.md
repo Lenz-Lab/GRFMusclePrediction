@@ -15,16 +15,26 @@ The pipeline runs from raw motion capture and force plate data through OpenSim m
 ---
 
 ## Pipeline Overview
+
 ```mermaid
 flowchart TD
-    A[Raw marker + force plate data] --> B[OpenSim preprocessing\nScaling · IK · ID · Static Opt]
-    B --> C[Gait cycle segmentation\nsignal_processing.py]
-    C --> D[Normalization + filtering\ndata_utils.py]
-    D --> E[Train / val / test split\nSplit_Single_Dataset.ipynb]
-    E --> F[Hyperparameter tuning\nTune_Models.ipynb · Optuna]
-    F --> G[Final model training\nLSTM · LSTM+Attn · CNN-LSTM · Transformer]
-    G --> H[Evaluation + cross-dataset testing\nCompare_Models.ipynb]
+    A1[Raw marker + force plate data\nSilder, 2008] --> B1[Coordinate transformation\nForce plate channel reassignment]
+    B1 --> C1[OpenSim pipeline\nScaling · IK · ID · Static Opt]
+    A2[Precomputed OpenSim results\nUhlrich, 2022] --> C2[Static Opt + Joint Reaction\nalready computed]
+    C1 --> D[Gait cycle segmentation]
+    C2 --> D
+    D --> E[Normalization + filtering\nSilder/Uhlrich_Batch_Processing Notebooks]
+    E --> F[Train / val / test split\nSplit_Single/Multiple_Datasets Notebooks]
+    F --> G[Hyperparameter tuning\nvia Optuna\nTune_Models Notebook]
+    G --> H[Final model training\nLSTM · LSTM+Attn · CNN-LSTM · Transformer]
+    H --> I[Evaluation + cross-dataset testing\nCompare_Models.ipynb]
+    style A1 fill:#e8f4f8
+    style A2 fill:#f0f4e8
+    style C1 fill:#e8f4f8
+    style C2 fill:#f0f4e8
 ```
+
+New datasets require preprocessing to produce the standard segment dictionary format — see [Adding a New Dataset](#adding-a-new-dataset) for the data contract.
 
 ---
 
