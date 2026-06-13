@@ -30,6 +30,7 @@ data/Silder_data/
 *.osim
 *.forces
 *.xml
+*.log
 
 # ── Model weights ─────────────────────────────────────────────────────────────
 *.pth

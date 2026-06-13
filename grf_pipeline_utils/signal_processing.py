@@ -276,9 +276,8 @@ def detect_foot_and_stance(tracking_df: pd.DataFrame, force_df: pd.DataFrame, th
        
     })
     #write our final df to a .pkl file for faster loading because we will need it later
-    if pickle_path == '':
-        pickle_path = '/Users/briankeller/Desktop/GRFMuscleModel/Old_Young_Walking_Data/transformed/grf_pickles/' + trial_name
-    final_df.to_pickle(pickle_path)
+    os.makedirs(pickle_path, exist_ok=True)
+    final_df.to_pickle(os.path.join(pickle_path, trial_name))
     final_df = final_df.drop(columns=['1_ground_force_new_px', 'ground_force_new_px'])
     return final_df, stance_segs        
 
