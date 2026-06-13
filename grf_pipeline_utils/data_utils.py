@@ -302,7 +302,7 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
                         force_seg_z = (-1.0 * grf_df.loc[grf_mask, "1_ground_force_vz"]).to_numpy()
                         pressure_seg_x = grf_df.loc[grf_mask, "1_ground_force_new_px"].to_numpy()
                         pressure_seg_y = grf_df.loc[grf_mask, "1_ground_force_py"].to_numpy()
-                        pressure_seg_z = grf_df.loc[grf_mask, "1_ground_force_pz"].to_numpy()
+                        pressure_seg_z = (-1.0 * grf_df.loc[grf_mask, "1_ground_force_pz"]).to_numpy()
                         mdata = muscle_l
 
                     compiled_segs[subject]["grf_x"].append(force_seg_x)
