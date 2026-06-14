@@ -243,7 +243,7 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
     for subject, trials in seg_times.items():
         compiled_segs[subject] = {
             'grf_x': [], 'grf_y': [], 'grf_z': [],
-            'cop_x': [], 'cop_y': [], 'cop_z': [],
+            'cop_x': [], 'cop_z': [],
             **{m: [] for m in base_muscles}
         }
         if add_achilles:
@@ -293,7 +293,6 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
                         force_seg_y = grf_df.loc[grf_mask, "ground_force_vy"].to_numpy()
                         force_seg_z = grf_df.loc[grf_mask, "ground_force_vz"].to_numpy()
                         pressure_seg_x = grf_df.loc[grf_mask, "ground_force_new_px"].to_numpy()
-                        pressure_seg_y = grf_df.loc[grf_mask, "ground_force_py"].to_numpy()
                         pressure_seg_z = grf_df.loc[grf_mask, "ground_force_pz"].to_numpy()
                         mdata = muscle_r
                     else:
@@ -301,7 +300,6 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
                         force_seg_y = grf_df.loc[grf_mask, "1_ground_force_vy"].to_numpy()
                         force_seg_z = (-1.0 * grf_df.loc[grf_mask, "1_ground_force_vz"]).to_numpy()
                         pressure_seg_x = grf_df.loc[grf_mask, "1_ground_force_new_px"].to_numpy()
-                        pressure_seg_y = grf_df.loc[grf_mask, "1_ground_force_py"].to_numpy()
                         pressure_seg_z = (-1.0 * grf_df.loc[grf_mask, "1_ground_force_pz"]).to_numpy()
                         mdata = muscle_l
 
@@ -309,7 +307,6 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
                     compiled_segs[subject]["grf_y"].append(force_seg_y)
                     compiled_segs[subject]["grf_z"].append(force_seg_z)
                     compiled_segs[subject]["cop_x"].append(pressure_seg_x)
-                    compiled_segs[subject]["cop_y"].append(pressure_seg_y)
                     compiled_segs[subject]["cop_z"].append(pressure_seg_z)
 
                     # muscles in a loop (the whole point)
