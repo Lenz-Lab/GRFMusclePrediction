@@ -111,7 +111,7 @@ def _make_seg_dict(n_subjects=3, n_segs=5, seg_len=100):
 def test_normalize_divides_by_mass():
     """Normalized values should equal original divided by mass."""
     seg_dict, keys_to_norm = _make_seg_dict(n_subjects=2)
-    masses = [70.0, 80.0]
+    masses = {'S1': 70.0, 'S2': 80.0}
     result = normalize_by_mass_in_order(seg_dict, masses, keys_to_norm)
 
     assert np.allclose(result['S1']['grf_y'][0],    100.0 / 70.0, atol=1e-6)
@@ -122,7 +122,7 @@ def test_normalize_divides_by_mass():
 def test_normalize_leaves_other_keys_unchanged():
     """Keys not in keys_to_normalize should be untouched."""
     seg_dict, keys_to_norm = _make_seg_dict(n_subjects=2)
-    masses = [70.0, 80.0]
+    masses = {'S1': 70.0, 'S2': 80.0}
     result = normalize_by_mass_in_order(seg_dict, masses, keys_to_norm)
 
     assert np.allclose(result['S1']['grf_x'][0], 50.0, atol=1e-6)
@@ -130,9 +130,9 @@ def test_normalize_leaves_other_keys_unchanged():
 
 
 def test_normalize_raises_on_mass_mismatch():
-    """Should raise ValueError if mass list length doesn't match subject count."""
+    """Should raise ValueError if a subject has no mass entry."""
     seg_dict, keys_to_norm = _make_seg_dict(n_subjects=3)
-    masses = [70.0, 80.0]  # only 2 masses for 3 subjects
+    masses = {'S1': 70.0, 'S2': 80.0}  # S3 missing
     with pytest.raises(ValueError):
         normalize_by_mass_in_order(seg_dict, masses, keys_to_norm)
 
@@ -140,7 +140,7 @@ def test_normalize_raises_on_mass_mismatch():
 def test_normalize_preserves_subject_count():
     """Output should have the same number of subjects as input."""
     seg_dict, keys_to_norm = _make_seg_dict(n_subjects=4)
-    masses = [60.0, 70.0, 80.0, 90.0]
+    masses = {'S1': 60.0, 'S2': 70.0, 'S3': 80.0, 'S4': 90.0}
     result = normalize_by_mass_in_order(seg_dict, masses, keys_to_norm)
     subject_keys = [k for k, v in result.items() if isinstance(v, dict)]
     assert len(subject_keys) == 4
