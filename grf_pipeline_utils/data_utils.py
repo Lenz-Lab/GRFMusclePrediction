@@ -359,14 +359,19 @@ def flatten_to_muscle_dict(seg_dict, muscle_keys):
     return {m: np.array(segs) for m, segs in out.items() if len(segs) > 0}
 
 def normalize_by_mass_in_order(seg_dict, all_masses, keys_to_normalize):
+    """
+    all_masses: dict mapping subject key → mass in kg (e.g. {'OA1': 63.5, 'Y1': 63}).
+    """
     out = {}
 
     subject_keys = [k for k, v in seg_dict.items() if isinstance(v, dict)]
 
-    if len(subject_keys) != len(all_masses):
-        raise ValueError("Mass list length does not match number of subjects")
+    missing = [s for s in subject_keys if s not in all_masses]
+    if missing:
+        raise ValueError(f"No mass entry for subjects: {missing}")
 
-    for subj, mass in zip(subject_keys, all_masses):
+    for subj in subject_keys:
+        mass = all_masses[subj]
         subj_dict = seg_dict[subj]
         out[subj] = {}
 
