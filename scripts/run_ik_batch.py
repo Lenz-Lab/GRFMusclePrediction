@@ -10,7 +10,7 @@ with open(os.path.join(repo_root, 'config.yaml')) as f:
     cfg = yaml.safe_load(f)
 
 root_dir        = os.path.join(repo_root, cfg['silder']['data_root'])
-output_dir = os.path.join(repo_root, cfg['paths']['processed_dir'], 'Silder')
+output_dir = os.path.join(repo_root, cfg['silder']['results']['transformed'])
 scaling_dir     = os.path.join(repo_root, cfg['silder']['results']['scaling'])
 ik_raw_dir      = os.path.join(repo_root, cfg['silder']['results']['ik_raw'])
 ik_filtered_dir = os.path.join(repo_root, cfg['silder']['results']['ik_filtered'])
