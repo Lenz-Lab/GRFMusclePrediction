@@ -33,13 +33,13 @@ silder:
     id_raw: results/Silder/ID/raw/
     id_filtered: results/Silder/ID/filtered/
     so: results/Silder/SO/
-  OA_subjects: [1, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 17, 18, 19, 20, 22, 24, 25]
+  OA_subjects: [1, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 17, 18, 19, 20, 22, 23, 24, 25]
   Y_subjects:  [1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
   bad_subjects: [OA3, OA6, OA15, OA16, OA21, Y3]
   speeds: ['80', '100', '120']
   n_trials: 5
   # Subjects excluded from train/val/test splits (non-standard or missing data)
-  skip_subjects: [time_resampled, OA4, OA5, OA23]
+  skip_subjects: [time_resampled]
   # Subject masses in kg, in subject order (used for normalization)
   OA_masses: [63.5026, 61.68824, 68.0385, 68.0385, 59.87388, 76.65671, 57.15234, 71.66722,
                84.36774, 67.13132, 52.61644, 70.76004, 75.29594, 69.39927, 83.00697, 47.62695,
