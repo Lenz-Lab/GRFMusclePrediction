@@ -14,6 +14,7 @@ dependencies = [
     "optuna",
     "scikit-learn",
     "pyyaml",
+    "opensim>=4.6",
 ]
 
 [project.optional-dependencies]
