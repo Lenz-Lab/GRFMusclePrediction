@@ -155,6 +155,24 @@ training:
   seed_search_range: 40
 
 
+# ── Versioning ────────────────────────────────────────────────────────────────
+# vX.Y convention:
+#   Major (X) — bump when the dataset schema changes (inputs/outputs, subject
+#               list, major preprocessing overhaul). Requires re-extraction and
+#               re-splitting.
+#   Minor (Y) — bump for training-only changes (loss function, Optuna re-tune,
+#               architecture experiments). Reuses existing segments and splits.
+#
+# File naming:
+#   Segments:     {Dataset}_segs_v{X}_normalized_filtered
+#   Splits:       {Dataset}_v{X}_{split}_data.npz         (major only)
+#   Models/Optuna:{Dataset}_v{X}.{Y}_{model}              (full version)
+#   Optuna DB:    models/optuna_v{X}.db                   (one per major version)
+active:
+  uhlrich_version: "1.1"   # current Uhlrich: 5 inputs, cop_z fixed, peak-weighted loss
+  silder_version:  "1.1"   # current Silder:  5 inputs, cop_z fixed, peak-weighted loss
+
+
 # ── Signal definitions ────────────────────────────────────────────────────────
 # These define the canonical input/output contract for the ML models.
 # Any new dataset must produce these keys after preprocessing.

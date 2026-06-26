@@ -1,0 +1,24 @@
+version: "1.1"
+date: 2026-06-18
+description: Peak-weighted MSE loss. Fresh Optuna study (100 trials per model).
+
+data_version: "1"   # uses Uhlrich_v1 and Silder_v1 segments/splits
+
+loss: peak_weighted
+loss_description: >
+  Amplitude-weighted MSE. Each timepoint is weighted by its absolute value
+  relative to the per-segment peak, emphasising accurate prediction near force
+  peaks. abs_true = y_true.abs(); weights = abs_true / (abs_true.max(dim=1,
+  keepdim=True).values + 1e-8); loss = ((y_pred - y_true)**2 * weights).mean()
+
+optuna:
+  n_trials: 100
+  db: optuna_v1.db   # shared across all v1.x training runs
+
+training:
+  num_epochs: 1000
+  patience: 20
+
+notes: |
+  Hyperparameters tuned fresh under peak-weighted loss (previous v1.0 Optuna
+  studies used plain MSE and were deleted before re-tuning).

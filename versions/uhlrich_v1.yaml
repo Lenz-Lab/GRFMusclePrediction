@@ -1,0 +1,43 @@
+version: uhlrich_v1
+date: 2026-06-17
+description: >
+  5-input Uhlrich dataset. COP Y removed, GRF Z and COP Z z_sign fixed for left-side
+  limb-centric frame. Subject2 reprocessed with correct mass (50.71 kg).
+
+inputs:  [grf_x, grf_y, grf_z, cop_x, cop_z]
+outputs: [addbrev, addlong, addmagDist, addmagIsch, addmagMid, addmagProx,
+          bflh, bfsh, edl, ehl, fdl, fhl, gaslat, gasmed,
+          glmax1, glmax2, glmax3, glmed1, glmed2, glmed3,
+          glmin1, glmin2, glmin3, grac, iliacus,
+          perbrev, perlong, psoas, recfem, semimem, semiten,
+          soleus, tibant, tibpost, vasint, vaslat, vasmed,
+          achilles, knee_fx, knee_fy, knee_fz, ankle_fx, ankle_fy, ankle_fz]
+
+subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+segment_file: Uhlrich_segs_v1_normalized_filtered
+split_prefix: Uhlrich_v1
+
+preprocessing:
+  n_timepoints: 100
+  butterworth_filter:
+    cutoff_hz: 6
+    sampling_rate_hz: 100
+    order: 2
+
+# MAD / % Outside filter (filter_segments in data_utils.py)
+# Drops a segment if the RMS of its excess beyond the population ±2.5 SD band
+# exceeds rms_threshold, OR if more than mean_threshold fraction of timepoints
+# fall outside ±2 SD of the population mean (consistency_mode: any = either
+# condition triggers a drop).
+segment_filter:
+  rms_threshold:    1.5
+  mean_threshold:   1.0
+  consistency_mode: any
+  filter_keys: base_muscles + [knee_fy, ankle_fy, grf_x, grf_y, grf_z, cop_x]
+
+changes_from_prev: |
+  - First formal version (pre-versioning runs were ad-hoc)
+  - Removed cop_y (zero / near-zero signal)
+  - Fixed grf_z and cop_z z_sign for left-side limb-centric frame
+  - Subject2 reprocessed with verified mass (50.71 kg)
