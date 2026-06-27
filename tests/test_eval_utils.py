@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 from grf_pipeline_utils.eval_utils import (
     calc_r2_per_output,
     calc_r2_overall,
