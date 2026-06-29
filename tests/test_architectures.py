@@ -1,9 +1,10 @@
-import torch
 import pytest
+import torch
+
 from models.architectures import (
-    LSTMModel,
-    LSTMAttentionModel,
     CNNLSTMModel,
+    LSTMAttentionModel,
+    LSTMModel,
     TransformerModel,
     build_model,
 )

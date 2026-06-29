@@ -1,7 +1,9 @@
 import os
-from grf_pipeline_utils.signal_processing import *
-from grf_pipeline_utils.opensim_utils import *
+
 import yaml
+
+from grf_pipeline_utils.opensim_utils import *
+from grf_pipeline_utils.signal_processing import *
 
 repo_root = os.path.dirname(os.path.abspath(__file__))
 repo_root = os.path.dirname(repo_root)

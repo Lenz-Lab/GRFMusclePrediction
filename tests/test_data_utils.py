@@ -1,13 +1,13 @@
 import numpy as np
 import pytest
-from grf_pipeline_utils.data_utils import (
-    interp_segments,
-    exclude_segments,
-    normalize_by_mass_in_order,
-    get_all_segments,
-    flatten_to_muscle_dict,
-)
 
+from grf_pipeline_utils.data_utils import (
+    exclude_segments,
+    flatten_to_muscle_dict,
+    get_all_segments,
+    interp_segments,
+    normalize_by_mass_in_order,
+)
 
 # ── interp_segments ────────────────────────────────────────────────────────────
 
@@ -96,7 +96,6 @@ def test_exclude_boundary_values():
 def _make_seg_dict(n_subjects=3, n_segs=5, seg_len=100):
     """Helper to build a minimal seg_dict for testing."""
     keys_to_norm = ['grf_y', 'achilles']
-    keys_other   = ['grf_x']
     seg_dict = {}
     for i in range(n_subjects):
         subj = f'S{i+1}'

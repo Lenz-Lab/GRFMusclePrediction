@@ -1,10 +1,13 @@
-import os
-import opensim as osim
-from .signal_processing import filter_ik, filter_id
 import gc
+import os
 import re
+
 import numpy as np
+import opensim as osim
 import pandas as pd
+
+from .signal_processing import filter_id, filter_ik
+
 
 def scale_generic(root_dir: str, mass: float, static_pose_filename: str, scaling_dir: str):
     dir = root_dir
@@ -217,7 +220,6 @@ def parse_ik_block(block):
     if frame_lines:
         rms_vals = np.array([float(f[0]) for f in frame_lines])
         max_vals = np.array([float(f[1]) for f in frame_lines])
-        markers = [f[2] for f in frame_lines]
 
         data["frames"] = len(frame_lines)
         data["mean_rms"] = np.mean(rms_vals)
@@ -249,7 +251,7 @@ def parse_full_ik_log(file_path, trial_names):
     except Exception as e:
         print(f'An error has occured: {e}')
     pattern = (
-        r"(MODEL:\s*\S+[\s\S]*?InverseKinematicsTool completed\s+\d+\s+frames\s+in\s+[0-9.]+\s+second\(s\)\.)"
+        r"(MODEL:\s*\S+[\s\S]*?InverseKinematicsTool completed\s+\d+\s+frames\s+in\s+[0-9.]+\s+second\(s\)\.)" # noqa: E501
     )
     matches = re.findall(pattern, text, flags=re.S)
     parsed = [parse_ik_block(m) for m in matches]

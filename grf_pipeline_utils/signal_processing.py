@@ -1,7 +1,8 @@
-import pandas as pd
-import numpy as np
-from scipy.signal import butter, filtfilt, find_peaks
 import os
+
+import numpy as np
+import pandas as pd
+from scipy.signal import butter, filtfilt, find_peaks
 
 
 def lowpass_filter_df(df: pd.DataFrame, cutoff: float, fs: float, order: int = 2):
@@ -362,7 +363,9 @@ def process_hjc_trc(input_path: str, output_path: str, markers_to_drop: list):
         try:
             coords = tracking_df[[f'X{idx}', f'Y{idx}', f'Z{idx}']].astype(float).values
             rotated = coords @ R.T
-            tracking_df[f'X{idx}'], tracking_df[f'Y{idx}'], tracking_df[f'Z{idx}'] = rotated[:, 0], rotated[:, 1], rotated[:, 2]
+            tracking_df[f'X{idx}'] = rotated[:, 0] 
+            tracking_df[f'Y{idx}'] = rotated[:, 1]
+            tracking_df[f'Z{idx}'] = rotated[:, 2]
         except KeyError:
             continue
     #convert marker positions to meters
@@ -394,7 +397,6 @@ def process_grf(input_path: str):
     """
     #load data from file into a header and a dataframe
     with open(input_path, 'r') as f:
-        header = [next(f) for _ in range(4)]  
         forces_df = pd.read_csv(f, sep='\t')  
     #compute time column from samples (sampling rate = 2000 hz)
     samples = forces_df.iloc[:, 0].astype(float)
@@ -424,9 +426,15 @@ def process_grf(input_path: str):
         T = forces_df[[f'MX{i}', f'MY{i}', f'MZ{i}']].astype(float).values
         forces_df[[f'MX{i}', f'MY{i}', f'MZ{i}']] = (T @ R.T) / 1000
     #separate COP and torque data
-    cop_cols = [col for col in forces_df.columns if col[:1] in ['X', 'Y', 'Z'] and col[1:].isdigit()]
+    cop_cols = [
+                col for col in forces_df.columns if col[:1] in ['X', 'Y', 'Z']
+                and col[1:].isdigit()
+            ]
     cop_df = forces_df[cop_cols].copy()
-    torque_cols = [col for col in forces_df.columns if col[:2] in['MX', 'MY', 'MZ'] and col[2:].isdigit()]
+    torque_cols = [
+                    col for col in forces_df.columns if col[:2] in['MX', 'MY', 'MZ'] 
+                    and col[2:].isdigit()
+                ]
     torque_df=forces_df[torque_cols].copy()
     #filter COP and torque data @ 6hz with a 2000 hz sampling rate
     lowpass_filter_df(cop_df, 6, 2000)
@@ -441,7 +449,12 @@ def process_grf(input_path: str):
     final_df = final_df[final_cols]
     return final_df
 
-def preprocess_trc_grf(trc_ip: str, trc_op: str, markers_to_drop: list,  grf_ip: str, grf_op: str, grf_pickle_path: str):
+def preprocess_trc_grf(trc_ip: str, 
+                       trc_op: str, 
+                       markers_to_drop: list,  
+                       grf_ip: str, 
+                       grf_op: str, 
+                       grf_pickle_path: str):
     """
     Function that calls file preprocessing and center of pressure detection functions. Writes transformed and re-formatted ground reation force data to a .mot file
 

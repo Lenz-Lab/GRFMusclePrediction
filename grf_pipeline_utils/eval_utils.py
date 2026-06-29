@@ -129,15 +129,15 @@ def generate_latex_table(results_muscle_dict, results_overall_dict, muscle_label
     table += "\\centering\n"
     table += "\\begin{tabular}{lcccc}\n"
     table += "\\toprule\n"
-    table += "\\textbf{Muscle} & \\textbf{LSTM} & \\textbf{CNN-LSTM} & \\textbf{LSTM+Attention} & \\textbf{Transformer}\\\\\n"
+    table += "\\textbf{Muscle} & \\textbf{LSTM} & \\textbf{CNN-LSTM} & \\textbf{LSTM+Attention} & \\textbf{Transformer}\\\\\n" # noqa: E501
     table += "\\midrule\n"
 
     for muscle, metrics in zip(muscle_labels, zip(*results_muscle_dict.values())):
-        table += f"{{{muscle}}} & {metrics[0]:.4f} & {metrics[1]:.4f} & {metrics[2]:.4f} & {metrics[3]:.4f} \\\\\n"
+        table += f"{{{muscle}}} & {metrics[0]:.4f} & {metrics[1]:.4f} & {metrics[2]:.4f} & {metrics[3]:.4f} \\\\\n" # noqa: E501
 
     table += "\\midrule\n"
 
-    table += f"Overall & {results_overall_dict['LSTM']:.4f} & {results_overall_dict['CNN-LSTM']:.4f} & {results_overall_dict['LSTM+Attention']:.4f} & {results_overall_dict['Transformer']:.4f} \\\\\n"
+    table += f"Overall & {results_overall_dict['LSTM']:.4f} & {results_overall_dict['CNN-LSTM']:.4f} & {results_overall_dict['LSTM+Attention']:.4f} & {results_overall_dict['Transformer']:.4f} \\\\\n" # noqa: E501
 
     table += "\\bottomrule\n"
     table += "\\end{tabular}\n"

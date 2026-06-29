@@ -1,19 +1,33 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
 import os
-from scipy.interpolate import interp1d
-from collections import Counter
 import re
+from collections import Counter
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from scipy.interpolate import interp1d
 
 # define data labels
 GRF_LABELS = ['GRF_x', 'GRF_y', 'GRF_z']
 MUSCLE_LABELS = ['tibpost', 'tibant', 'edl', 'ehl', 'fdl', 'fhl', 'perbrev', 'perlong', 'achilles']
 
 # define index for data labels
-GRF_DICT = {0: 'GRF_x', 1: 'GRF_y', 2: 'GRF_z'}
-MUSCLE_DICT = {0: 'tibpost', 1: 'tibant', 2: 'edl', 3: 'ehl', 4: 'fdl', 5: 'fhl', 6: 'perbrev', 7: 'perlong', 8: 'achilles'}
+GRF_DICT = {
+            0: 'GRF_x', 
+            1: 'GRF_y', 
+            2: 'GRF_z'
+        }
+MUSCLE_DICT = {
+                0: 'tibpost', 
+                1: 'tibant', 
+                2: 'edl', 
+                3: 'ehl', 
+                4: 'fdl', 
+                5: 'fhl', 
+                6: 'perbrev', 
+                7: 'perlong', 
+                8: 'achilles'
+            }
 
 
 def ad2float(array_double_col):
@@ -261,8 +275,16 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
             # load muscle data
             muscle_path = os.path.join(muscle_force_dir, trial_name, 'results_forces.sto')
             muscle_storage = osim.Storage(muscle_path)
-            muscle_time, muscle_r = load_muscle_columns(storage=muscle_storage, base_muscles=base_muscles, side_suffix='r')
-            _, muscle_l = load_muscle_columns(storage=muscle_storage, base_muscles=base_muscles, side_suffix='l')
+            muscle_time, muscle_r = load_muscle_columns(
+                                                        storage=muscle_storage, 
+                                                        base_muscles=base_muscles, 
+                                                        side_suffix='r'
+                                                    )
+            _, muscle_l = load_muscle_columns(
+                                              storage=muscle_storage, 
+                                              base_muscles=base_muscles, 
+                                              side_suffix='l'
+                                            )
             # load JRF data if requested
             if fetch_jrf:
                 jrf_path = os.path.join(jrf_dir, trial_name, jrf_filename)
@@ -275,7 +297,6 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
                 side = side.lower()
                 if side not in ("right", "left"):
                     continue
-                side_char = 'r' if side == 'right' else 'l'
                 for (s, e) in seg_list:
                     # skip segments flagged for bad activation values
                     key = (trial_name, side, round(s, 4), round(e, 4))
@@ -480,7 +501,6 @@ def plot_achilles_segments(achilles_resampled, time_resampled, figsize=(10, 10),
     achilles_resampled: list/array of segments, each shape (T,)
     time_resampled: typically resampled_segs['time_resampled'] where time_resampled[0] is (T,)
     """
-    fig = plt.figure(figsize=figsize)
 
     num_segments = len(achilles_resampled)
     x = time_resampled[0] * 100  # percent stance
