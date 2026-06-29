@@ -169,8 +169,28 @@ training:
 #   Models/Optuna:{Dataset}_v{X}.{Y}_{model}              (full version)
 #   Optuna DB:    models/optuna_v{X}.db                   (one per major version)
 active:
-  uhlrich_version: "1.1"   # current Uhlrich: 5 inputs, cop_z fixed, peak-weighted loss
-  silder_version:  "1.1"   # current Silder:  5 inputs, cop_z fixed, peak-weighted loss
+  uhlrich_version: "1.2"   # current Uhlrich: 5 inputs, standard MSE loss
+  silder_version:  "1.2"   # current Silder:  5 inputs, standard MSE loss
+
+
+# ── Reporting ────────────────────────────────────────────────────────────────
+# Standardized output subset used for metric summaries and cross-version comparison.
+# Compare_Models reads this; individual plotting cells can override with SUBSET_KEYS.
+reporting:
+  primary_outputs:
+    - knee_fy
+    - knee_fz
+    - knee_fx
+    - ankle_fy
+    - ankle_fz
+    - ankle_fx
+    - achilles
+    - tibant
+    - tibpost
+    - edl
+    - fdl
+    - perlong
+    - perbrev
 
 
 # ── Signal definitions ────────────────────────────────────────────────────────
