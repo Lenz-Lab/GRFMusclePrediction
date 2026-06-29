@@ -1,16 +1,16 @@
 import numpy as np
-from grf_pipeline_utils.eval_utils import (
-    calc_r2_per_output,
-    calc_r2_overall,
-    calc_rmse_per_output,
-    calc_rmse_overall,
-    calc_rrmse_per_output,
-    calc_rrmse_overall,
-    calc_rrmse_weighted,
-    calc_mae_per_output,
-    calc_mae_overall,
-)
 
+from grf_pipeline_utils.eval_utils import (
+    calc_mae_overall,
+    calc_mae_per_output,
+    calc_r2_overall,
+    calc_r2_per_output,
+    calc_rmse_overall,
+    calc_rmse_per_output,
+    calc_rrmse_overall,
+    calc_rrmse_per_output,
+    calc_rrmse_weighted,
+)
 
 # ── Fixtures ───────────────────────────────────────────────────────────────────
 
