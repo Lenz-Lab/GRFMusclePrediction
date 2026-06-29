@@ -1,0 +1,27 @@
+versions:
+  "1.1":
+    date: 2026-06-18
+    loss: peak_weighted
+    loss_description: >
+      Amplitude-weighted MSE. Each timepoint is weighted by its absolute value
+      relative to the per-segment peak: weights = abs(y) / (max(abs(y)) + 1e-8);
+      loss = mean((y_pred - y_true)^2 * weights).
+    optuna_trials: 100
+    db: optuna_v1.db
+    num_epochs: 1000
+    patience: 20
+    notes: >
+      Fresh Optuna study under peak-weighted loss. Previous MSE-tuned studies
+      (v1.0) were deleted before re-tuning to avoid objective contamination.
+
+  "1.2":
+    date: 2026-06-27
+    loss: mse
+    loss_description: Plain mean squared error — nn.MSELoss().
+    optuna_trials: 100
+    db: optuna_v1.db
+    num_epochs: 1000
+    patience: 20
+    notes: >
+      Standard MSE loss. Companion run to v1.1 to isolate the effect of the
+      loss function. Reuses v1 splits; fresh Optuna studies under MSE objective.
