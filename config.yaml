@@ -169,8 +169,8 @@ training:
 #   Models/Optuna:{Dataset}_v{X}.{Y}_{model}              (full version)
 #   Optuna DB:    models/optuna_v{X}.db                   (one per major version)
 active:
-  uhlrich_version: "1.2"   # current Uhlrich: 5 inputs, standard MSE loss
-  silder_version:  "1.2"   # current Silder:  5 inputs, standard MSE loss
+  uhlrich_version: "2.0"   # current Uhlrich: 5 inputs, +hip JRFs, standard MSE loss
+  silder_version:  "2.0"   # current Silder:  5 inputs, +hip JRFs, standard MSE loss
 
 
 # ── Reporting ────────────────────────────────────────────────────────────────
@@ -178,6 +178,9 @@ active:
 # Compare_Models reads this; individual plotting cells can override with SUBSET_KEYS.
 reporting:
   primary_outputs:
+    - hip_fy
+    - hip_fz
+    - hip_fx
     - knee_fy
     - knee_fz
     - knee_fx
@@ -242,6 +245,9 @@ signals:
     - vaslat
     - vasmed
     - achilles
+    - hip_fx
+    - hip_fy
+    - hip_fz
     - knee_fx
     - knee_fy
     - knee_fz
