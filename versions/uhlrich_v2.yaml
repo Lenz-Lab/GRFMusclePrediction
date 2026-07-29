@@ -1,0 +1,49 @@
+version: uhlrich_v2
+date: 2026-07-29
+description: >
+  5-input Uhlrich dataset. Adds hip joint contact forces (hip_fx, hip_fy,
+  hip_fz) to the v1 output set. The underlying OpenSim JointReaction
+  analysis already ran with jointNames='all', so hip JRF columns were
+  already present in every existing results_JointReaction .sto file — this
+  version only extends the extraction column map, no new OpenSim runs
+  were required.
+
+inputs:  [grf_x, grf_y, grf_z, cop_x, cop_z]
+outputs: [addbrev, addlong, addmagDist, addmagIsch, addmagMid, addmagProx,
+          bflh, bfsh, edl, ehl, fdl, fhl, gaslat, gasmed,
+          glmax1, glmax2, glmax3, glmed1, glmed2, glmed3,
+          glmin1, glmin2, glmin3, grac, iliacus,
+          perbrev, perlong, psoas, recfem, semimem, semiten,
+          soleus, tibant, tibpost, vasint, vaslat, vasmed,
+          achilles, hip_fx, hip_fy, hip_fz, knee_fx, knee_fy, knee_fz,
+          ankle_fx, ankle_fy, ankle_fz]
+
+subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+segment_file: Uhlrich_segs_v2_normalized_filtered
+split_prefix: Uhlrich_v2
+
+preprocessing:
+  n_timepoints: 100
+  butterworth_filter:
+    cutoff_hz: 6
+    sampling_rate_hz: 100
+    order: 2
+
+# MAD / % Outside filter (filter_segments in data_utils.py)
+# Reusing v1 thresholds as a starting point; retune if hip JRF sanity plots
+# show they don't fit the new signal's distribution.
+segment_filter:
+  rms_threshold:    1.5
+  mean_threshold:   1.0
+  consistency_mode: any
+  filter_keys: base_muscles + [knee_fy, ankle_fy, grf_x, grf_y, grf_z, cop_x]
+
+changes_from_prev: |
+  - Added hip_fx, hip_fy, hip_fz to outputs (hip joint contact forces)
+  - Hip JRF data was already present in existing OpenSim JointReaction .sto
+    files (jointNames='all'); no new OpenSim runs needed, only an extended
+    jrf_cols map in the batch-processing notebook
+  - Left-side hip_fz now sign-flipped for limb-centric frame, consistent
+    with existing knee_fz/ankle_fz convention
+  - Inputs, subjects, and segment_filter thresholds unchanged from v1
