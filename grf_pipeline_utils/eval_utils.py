@@ -66,6 +66,96 @@ def calc_mae_overall(y_true, y_pred):
     return np.mean(np.abs(y_true.flatten() - y_pred.flatten()))
 
 
+def calc_flexor_ratio(y, output_keys,
+                       ankle_keys=('achilles',),
+                       hip_keys=('psoas', 'iliacus')):
+    """Per-trial ratio of peak combined ankle-plantarflexor force to peak combined
+    hip-flexor force. Reflects the distal->proximal load-redistribution pattern
+    studied across the Y/OA cohorts.
+
+    Default `ankle_keys` is 'achilles' alone: that output channel is already the
+    derived sum of soleus + gaslat + gasmed (see data_utils.py), so including
+    those muscles alongside it would double/triple-count their contribution.
+    """
+    ankle_idxs = [output_keys.index(k) for k in ankle_keys]
+    hip_idxs = [output_keys.index(k) for k in hip_keys]
+
+    ankle_signal = y[:, :, ankle_idxs].sum(axis=2)  # (n_samples, seq_len)
+    hip_signal = y[:, :, hip_idxs].sum(axis=2)
+
+    peak_ankle = ankle_signal.max(axis=1)  # (n_samples,)
+    peak_hip = hip_signal.max(axis=1)
+
+    return peak_ankle / peak_hip
+
+
+def calc_gastroc_soleus_ratio(y, output_keys,
+                               gastroc_keys=('gaslat', 'gasmed'),
+                               soleus_key='soleus',
+                               reduction='mean'):
+    """Per-trial gastrocnemius / (gastrocnemius + soleus) force ratio, mirroring
+    the activation ratio in Uhlrich et al. 2022 (Sci Rep), Eq. 3:
+    ratio = EMG_gastroc / (EMG_gastroc + EMG_soleus), averaged over the stance
+    phase. That paper used EMG activation; this uses predicted/ground-truth
+    muscle FORCE instead (the quantity this model actually predicts), so treat
+    it as a force-based proxy for the same underlying redistribution, not a
+    literal reproduction of their EMG numbers. `gastroc_keys` sums the medial
+    and lateral heads into one combined "gastrocnemius" signal, matching the
+    paper's single summary measure used for biofeedback rather than treating
+    medial/lateral as separate ratios.
+
+    `reduction='mean'` (default) matches the paper's stance-averaged EMG
+    definition; pass 'peak' for a peak-force variant instead.
+    """
+    gastroc_idxs = [output_keys.index(k) for k in gastroc_keys]
+    soleus_idx = output_keys.index(soleus_key)
+
+    gastroc_signal = y[:, :, gastroc_idxs].sum(axis=2)  # (n_samples, seq_len)
+    soleus_signal = y[:, :, soleus_idx]                 # (n_samples, seq_len)
+
+    if reduction == 'mean':
+        gastroc_val = gastroc_signal.mean(axis=1)
+        soleus_val = soleus_signal.mean(axis=1)
+    elif reduction == 'peak':
+        gastroc_val = gastroc_signal.max(axis=1)
+        soleus_val = soleus_signal.max(axis=1)
+    else:
+        raise ValueError(f"reduction must be 'mean' or 'peak', got {reduction!r}")
+
+    return gastroc_val / (gastroc_val + soleus_val)
+
+
+def calc_dice_per_output(y_true, y_pred, labels=None, verbose=True):
+    # Assumes non-negative curves (static-optimization forces), so the plain
+    # overlap formula works without binarizing.
+    overlap = np.sum(np.minimum(y_true, y_pred), axis=(0, 1))
+    total = np.sum(y_true + y_pred, axis=(0, 1))
+    dice = 2 * overlap / total
+    if verbose and labels is not None:
+        for lbl, v in zip(labels, dice):
+            print(f'  {lbl}: {v:.4f}')
+    return dice
+
+
+def calc_dice_overall(y_true, y_pred):
+    flat_t, flat_p = y_true.flatten(), y_pred.flatten()
+    return 2 * np.sum(np.minimum(flat_t, flat_p)) / np.sum(flat_t + flat_p)
+
+
+def calc_dice_per_trial(y_true, y_pred):
+    """Unreduced per-trial, per-output Dice — used to feed compare_models_wilcoxon."""
+    overlap = np.sum(np.minimum(y_true, y_pred), axis=1)
+    total = np.sum(y_true + y_pred, axis=1)
+    return 2 * overlap / total  # (n_samples, n_outputs)
+
+
+def compare_models_wilcoxon(metric_a, metric_b, alternative='two-sided'):
+    """Paired Wilcoxon signed-rank test between two per-trial metric arrays."""
+    from scipy.stats import wilcoxon
+    statistic, p_value = wilcoxon(metric_a, metric_b, alternative=alternative)
+    return {'statistic': float(statistic), 'p_value': float(p_value)}
+
+
 def load_model(model, model_path):
     model.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
 

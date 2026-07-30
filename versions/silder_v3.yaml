@@ -1,0 +1,57 @@
+version: silder_v3
+date: 2026-07-30
+description: >
+  5-input Silder dataset (OA + YA cohorts). Adds per-segment subject_id and
+  trial_name metadata to the saved .npz splits, enabling grouping of results
+  by subject/age-cohort or by walking speed (recoverable by parsing
+  trial_name, format "{subject}_{speed}_{trialnum}", e.g. "Y6_120_4") without
+  needing to re-run the model. Inputs, outputs, subject lists, and
+  segment_filter thresholds are otherwise unchanged from v2.
+
+inputs:  [grf_x, grf_y, grf_z, cop_x, cop_z]
+outputs: [addbrev, addlong, addmagDist, addmagIsch, addmagMid, addmagProx,
+          bflh, bfsh, edl, ehl, fdl, fhl, gaslat, gasmed,
+          glmax1, glmax2, glmax3, glmed1, glmed2, glmed3,
+          glmin1, glmin2, glmin3, grac, iliacus,
+          perbrev, perlong, psoas, recfem, semimem, semiten,
+          soleus, tibant, tibpost, vasint, vaslat, vasmed,
+          achilles, hip_fx, hip_fy, hip_fz, knee_fx, knee_fy, knee_fz,
+          ankle_fx, ankle_fy, ankle_fz]
+
+OA_subjects: [1, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 22, 23, 24, 25]
+Y_subjects:  [1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
+bad_subjects: [OA3, OA6, OA16, OA21, Y3]
+
+segment_files:
+  OA: Silder_OA_segs_v3_normalized_filtered
+  YA: Silder_YA_segs_v3_normalized_filtered
+split_prefix: Silder_mixed_v3
+
+preprocessing:
+  n_timepoints: 100
+  butterworth_filter:
+    cutoff_hz: 6
+    sampling_rate_hz: 100
+    order: 2
+
+# MAD / % Outside filter (filter_segments in data_utils.py) -- unchanged from v2.
+segment_filter:
+  rms_threshold:    0.75
+  mean_threshold:   0.33
+  consistency_mode: any
+  filter_keys: base_muscles + base_jrfs + [grf_x, grf_y, grf_z, cop_x]
+
+changes_from_prev: |
+  - Added per-segment 'trial_name' metadata, threaded through data_to_segs
+    (grf_pipeline_utils/data_utils.py) and saved to every split .npz file as
+    parallel subject_ids/trial_names arrays via the new pack_metadata()
+    helper. subject_id required no upstream changes (it was already the
+    compiled_segs dict key at every stage).
+  - For Silder, trial_name is the full "{subject}_{speed}_{trialnum}" string
+    (e.g. "Y6_120_4"); walking speed can be recovered downstream by parsing
+    this string, no separate 'speed' field was added to the pipeline itself.
+  - Silder_Batch_Processing.ipynb's resample step now explicitly skips
+    interpolating 'trial_name' (a string, not a numeric time series) rather
+    than passing every dict key through interp_segments unconditionally.
+  - Inputs, outputs, subject lists, and segment_filter thresholds unchanged
+    from v2 -- this is a metadata-only addition, no re-tuning required.

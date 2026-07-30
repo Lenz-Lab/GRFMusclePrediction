@@ -3,10 +3,13 @@ import pytest
 
 from grf_pipeline_utils.data_utils import (
     exclude_segments,
+    filter_segments,
+    filter_segs_by_metadata,
     flatten_to_muscle_dict,
     get_all_segments,
     interp_segments,
     normalize_by_mass_in_order,
+    pack_metadata,
 )
 
 # ── interp_segments ────────────────────────────────────────────────────────────
@@ -188,3 +191,186 @@ def test_flatten_missing_muscle_skipped():
     result = flatten_to_muscle_dict(seg_dict, muscle_keys=['achilles', 'tibant'])
     assert result['achilles'].shape[0] == 1
     assert result['tibant'].shape[0] == 1
+
+
+# ── pack_metadata ───────────────────────────────────────────────────────────────
+
+def _dict_to_array_rowcount(split_dict, all_keys):
+    """
+    Minimal stand-in for the split notebooks' dict_to_array (which packs
+    ALL_KEYS into the X/y array) -- lives only in Split_Single_Dataset.ipynb /
+    Split_Multiple_Datasets.ipynb, not importable here. Only the row count is
+    needed to test the alignment guarantee pack_metadata depends on.
+    """
+    total = 0
+    for subj, data in split_dict.items():
+        total += len(data[all_keys[0]])
+    return total
+
+
+def _make_split_dict(n_subjects=2, n_segs=3, extra_keys=('trial_name',)):
+    """Build a synthetic split_dict with one numeric signal plus arbitrary
+    per-segment metadata keys, so tests don't hardcode 'trial_name' as the
+    only possible groupable key."""
+    split_dict = {}
+    for i in range(n_subjects):
+        subj = f'S{i + 1}'
+        split_dict[subj] = {'grf_x': [np.ones(10) for _ in range(n_segs)]}
+        for key in extra_keys:
+            split_dict[subj][key] = [f'{key}_{subj}_{j}' for j in range(n_segs)]
+    return split_dict
+
+
+def test_pack_metadata_subject_id_matches_dict_keys():
+    """subject_id should repeat each subject's key once per its segments."""
+    split_dict = _make_split_dict(n_subjects=2, n_segs=3)
+    result = pack_metadata(split_dict, metadata_keys=['trial_name'])
+    assert list(result['subject_id']) == ['S1', 'S1', 'S1', 'S2', 'S2', 'S2']
+
+
+def test_pack_metadata_values_match_source_order():
+    """Packed values for a metadata key should match the source lists in order."""
+    split_dict = _make_split_dict(n_subjects=2, n_segs=2, extra_keys=('trial_name',))
+    result = pack_metadata(split_dict, metadata_keys=['trial_name'])
+    assert list(result['trial_name']) == [
+        'trial_name_S1_0', 'trial_name_S1_1',
+        'trial_name_S2_0', 'trial_name_S2_1',
+    ]
+
+
+@pytest.mark.parametrize('metadata_keys', [
+    ['trial_name'],
+    ['trial_name', 'side'],
+    ['trial_name', 'side', 'speed'],
+])
+def test_pack_metadata_arbitrary_key_lists(metadata_keys):
+    """
+    pack_metadata must work for any list of metadata key names, not just
+    today's 'trial_name' -- proves adding a new groupable key later (e.g.
+    'side' or a separately-parsed 'speed') requires no changes to this
+    function, only adding the key's name to the caller's metadata_keys list.
+    """
+    split_dict = _make_split_dict(n_subjects=2, n_segs=3, extra_keys=tuple(metadata_keys))
+    result = pack_metadata(split_dict, metadata_keys=metadata_keys)
+
+    assert set(result.keys()) == {'subject_id', *metadata_keys}
+    for key in metadata_keys:
+        assert len(result[key]) == 6  # 2 subjects * 3 segs
+    assert len(result['subject_id']) == 6
+
+
+def test_pack_metadata_row_count_matches_dict_to_array():
+    """
+    The row count pack_metadata produces must equal what the split notebooks'
+    dict_to_array would produce for the same split_dict -- this is the actual
+    alignment guarantee the whole subject_id/trial_name design depends on, so
+    it's asserted directly rather than just implied by matching loop structure.
+    """
+    split_dict = _make_split_dict(n_subjects=3, n_segs=4, extra_keys=('trial_name',))
+    expected_rows = _dict_to_array_rowcount(split_dict, all_keys=['grf_x'])
+
+    result = pack_metadata(split_dict, metadata_keys=['trial_name'])
+    assert len(result['subject_id']) == expected_rows
+    assert len(result['trial_name']) == expected_rows
+
+
+# ── filter_segments: generic list-key passthrough ───────────────────────────────
+
+def _make_segs_with_trial_name():
+    """
+    2 subjects, each with 4 segments tagged 'baseline'/'baseline'/'retention'/'retention',
+    plus 'time_resampled' as a non-dict entry that should pass through untouched.
+    """
+    segs = {
+        'S1': {
+            'grf_y':      [np.ones(10) * 1, np.ones(10) * 2, np.ones(10) * 3, np.ones(10) * 4],
+            'trial_name': ['baseline', 'baseline', 'retention', 'retention'],
+        },
+        'S2': {
+            'grf_y':      [np.ones(10) * 5, np.ones(10) * 6, np.ones(10) * 7, np.ones(10) * 8],
+            'trial_name': ['baseline', 'retention', 'retention', 'retention'],
+        },
+        'time_resampled': [np.linspace(0, 1, 10)],
+    }
+    return segs
+
+
+# ── filter_segs_by_metadata ─────────────────────────────────────────────────────
+
+def test_filter_segs_by_metadata_basic_filtering():
+    """Should keep only segments whose trial_name is in the requested values."""
+    segs = _make_segs_with_trial_name()
+    result = filter_segs_by_metadata(segs, 'trial_name', ['baseline'])
+    assert result['S1']['trial_name'] == ['baseline', 'baseline']
+    assert result['S2']['trial_name'] == ['baseline']
+
+
+def test_filter_segs_by_metadata_keeps_signals_aligned():
+    """Filtering must apply identically to every list-valued signal, not just the key."""
+    segs = _make_segs_with_trial_name()
+    result = filter_segs_by_metadata(segs, 'trial_name', ['retention'])
+    # S1's retention segments were grf_y values 3 and 4
+    assert np.allclose(result['S1']['grf_y'][0], 3.0)
+    assert np.allclose(result['S1']['grf_y'][1], 4.0)
+    assert len(result['S1']['grf_y']) == len(result['S1']['trial_name']) == 2
+
+
+def test_filter_segs_by_metadata_subject_with_zero_matches_kept_empty():
+    """A subject with no matching segments should be kept with empty lists, not dropped."""
+    segs = _make_segs_with_trial_name()
+    result = filter_segs_by_metadata(segs, 'trial_name', ['nonexistent_stratum'])
+    assert 'S1' in result and 'S2' in result
+    assert result['S1']['grf_y'] == []
+    assert result['S1']['trial_name'] == []
+
+
+def test_filter_segs_by_metadata_missing_key_treated_as_no_matches():
+    """A subject lacking the metadata key entirely should come back empty, not error."""
+    segs = _make_segs_with_trial_name()
+    segs['S3'] = {'grf_y': [np.ones(10)]}   # no 'trial_name' key
+    result = filter_segs_by_metadata(segs, 'trial_name', ['baseline'])
+    assert result['S3']['grf_y'] == []
+
+
+def test_filter_segs_by_metadata_preserves_non_dict_entries():
+    """Non-subject entries like 'time_resampled' should pass through unchanged."""
+    segs = _make_segs_with_trial_name()
+    result = filter_segs_by_metadata(segs, 'trial_name', ['baseline'])
+    assert result['time_resampled'] is segs['time_resampled']
+
+
+def test_filter_segs_by_metadata_does_not_mutate_input():
+    """The input dict should be left untouched -- a new dict is returned."""
+    segs = _make_segs_with_trial_name()
+    original_len = len(segs['S1']['grf_y'])
+    filter_segs_by_metadata(segs, 'trial_name', ['baseline'])
+    assert len(segs['S1']['grf_y']) == original_len
+
+
+def test_filter_segments_passes_through_arbitrary_metadata_key():
+    """
+    filter_segments must filter ANY list-valued key of matching length in
+    lockstep with the muscle-based keep_mask -- not just known signal names.
+    This is the invariant every future groupable metadata key (trial_name
+    today, anything added later) relies on to survive filtering un-desynced.
+    Uses a key name ('grouping_key') that isn't a real signal, to prove
+    nothing here is special-cased to 'trial_name' specifically.
+    """
+    n_good = 20
+    good_segs  = [np.ones(50) * 1.0 for _ in range(n_good)]
+    bad_seg    = [np.ones(50) * 100.0]  # far outside the band -> should be dropped
+    good_tags  = [f'good_{i}' for i in range(n_good)]
+    bad_tag    = ['bad_outlier']
+
+    seg_dict = {
+        'S1': {
+            'm1':            good_segs + bad_seg,
+            'grouping_key':  good_tags + bad_tag,
+        }
+    }
+
+    filtered, dropped, bands = filter_segments(seg_dict, muscle_keys=['m1'])
+
+    assert len(filtered['S1']['m1']) == n_good
+    assert filtered['S1']['grouping_key'] == good_tags
+    assert 'bad_outlier' not in filtered['S1']['grouping_key']

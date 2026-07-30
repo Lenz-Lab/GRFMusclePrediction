@@ -1,0 +1,57 @@
+version: uhlrich_v3
+date: 2026-07-30
+description: >
+  5-input Uhlrich dataset. Adds per-segment subject_id and trial_name
+  metadata to the saved .npz splits, enabling grouping of results by subject
+  or by trial phase (baseline / biofeedback / retention -- see Uhlrich et al.
+  2022, Sci Rep) without needing to re-run the model. Inputs, outputs,
+  subjects, and segment_filter thresholds are otherwise unchanged from v2.
+
+inputs:  [grf_x, grf_y, grf_z, cop_x, cop_z]
+outputs: [addbrev, addlong, addmagDist, addmagIsch, addmagMid, addmagProx,
+          bflh, bfsh, edl, ehl, fdl, fhl, gaslat, gasmed,
+          glmax1, glmax2, glmax3, glmed1, glmed2, glmed3,
+          glmin1, glmin2, glmin3, grac, iliacus,
+          perbrev, perlong, psoas, recfem, semimem, semiten,
+          soleus, tibant, tibpost, vasint, vaslat, vasmed,
+          achilles, hip_fx, hip_fy, hip_fz, knee_fx, knee_fy, knee_fz,
+          ankle_fx, ankle_fy, ankle_fz]
+
+subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+segment_file: Uhlrich_segs_v3_normalized_filtered
+split_prefix: Uhlrich_v3
+
+preprocessing:
+  n_timepoints: 100
+  butterworth_filter:
+    cutoff_hz: 6
+    sampling_rate_hz: 100
+    order: 2
+
+# MAD / % Outside filter (filter_segments in data_utils.py) -- unchanged from v2.
+segment_filter:
+  rms_threshold:    1.5
+  mean_threshold:   1.0
+  consistency_mode: any
+  filter_keys: base_muscles + [knee_fy, ankle_fy, grf_x, grf_y, grf_z, cop_x]
+
+changes_from_prev: |
+  - Added per-segment 'trial_name' metadata, threaded through the segment-
+    extraction loop in Uhlrich_Batch_Processing.ipynb and saved to every
+    split .npz file as parallel subject_ids/trial_names arrays via the new
+    pack_metadata() helper (grf_pipeline_utils/data_utils.py). subject_id
+    required no upstream changes (it was already the compiled_segs dict key
+    at every stage).
+  - trial_name is one of the 8 literal phase names from config.yaml's
+    uhlrich.trial_names (e.g. "walking_baseline1", "walking_retention1"),
+    enabling grouping by baseline/biofeedback/retention.
+  - The "Length-Based Exclusion" step now computes its keep-mask once from a
+    numeric reference key (grf_y) and applies it to every key including
+    trial_name, instead of calling exclude_segments independently per key --
+    exclude_segments filters by len(seg), which is meaningless for a string
+    like trial_name and would have desynced it from the numeric signals.
+  - The resample step now explicitly skips interpolating 'trial_name' rather
+    than passing every dict key through interp_segments unconditionally.
+  - Inputs, outputs, subjects, and segment_filter thresholds unchanged from
+    v2 -- this is a metadata-only addition, no re-tuning required.

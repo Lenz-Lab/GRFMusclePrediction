@@ -1,6 +1,14 @@
+import inspect
+
 import numpy as np
+import pytest
 
 from grf_pipeline_utils.eval_utils import (
+    calc_dice_overall,
+    calc_dice_per_output,
+    calc_dice_per_trial,
+    calc_flexor_ratio,
+    calc_gastroc_soleus_ratio,
     calc_mae_overall,
     calc_mae_per_output,
     calc_r2_overall,
@@ -10,6 +18,7 @@ from grf_pipeline_utils.eval_utils import (
     calc_rrmse_overall,
     calc_rrmse_per_output,
     calc_rrmse_weighted,
+    compare_models_wilcoxon,
 )
 
 # ── Fixtures ───────────────────────────────────────────────────────────────────
@@ -264,3 +273,219 @@ def test_mae_overall_known_error():
     y_true, y_pred = _known_error()
     # total errors: [1, 0, 1, 0] flattened → mean = 0.5
     assert np.isclose(calc_mae_overall(y_true, y_pred), 0.5, atol=1e-6)
+
+
+# ── calc_flexor_ratio ──────────────────────────────────────────────────────────
+
+_FLEXOR_KEYS = ['soleus', 'gaslat', 'gasmed', 'achilles', 'psoas', 'iliacus']
+
+
+def _flexor_fixture():
+    """
+    2 samples, 3 timesteps, 6 outputs ordered per _FLEXOR_KEYS.
+    Sample 0: ankle group (soleus only) peaks at 3, hip group (psoas only) peaks at 1 -> ratio 3.0
+    Sample 1: ankle group peaks at 2, hip group (psoas only) peaks at 4 -> ratio 0.5
+    """
+    y = np.zeros((2, 3, 6))
+    y[0, :, 0] = [1, 2, 3]   # soleus
+    y[0, :, 4] = [1, 1, 1]   # psoas
+    y[1, :, 0] = [2, 2, 2]   # soleus
+    y[1, :, 4] = [4, 4, 4]   # psoas
+    return y
+
+
+def test_flexor_ratio_known_values():
+    """Ratio should match hand-calculated peak-ankle / peak-hip per trial."""
+    y = _flexor_fixture()
+    ratio = calc_flexor_ratio(y, _FLEXOR_KEYS, ankle_keys=('soleus',), hip_keys=('psoas',))
+    assert np.allclose(ratio, [3.0, 0.5], atol=1e-6)
+
+
+def test_flexor_ratio_shape():
+    """Ratio should return one value per trial."""
+    y = _flexor_fixture()
+    ratio = calc_flexor_ratio(y, _FLEXOR_KEYS, ankle_keys=('soleus',), hip_keys=('psoas',))
+    assert ratio.shape == (2,)
+
+
+def test_flexor_ratio_equal_groups_is_one():
+    """Identical ankle and hip group magnitudes should give ratio 1.0."""
+    y = np.zeros((1, 3, 6))
+    y[0, :, 0] = [1, 2, 3]   # soleus (ankle group)
+    y[0, :, 4] = [1, 2, 3]   # psoas (hip group)
+    ratio = calc_flexor_ratio(y, _FLEXOR_KEYS, ankle_keys=('soleus',), hip_keys=('psoas',))
+    assert np.isclose(ratio[0], 1.0, atol=1e-6)
+
+
+def test_flexor_ratio_default_ankle_group_is_achilles_only():
+    """
+    Default ankle_keys must be ('achilles',) alone -- 'achilles' is already the
+    derived sum of soleus + gaslat + gasmed (see data_utils.py), so including
+    those muscles too would double/triple-count their contribution.
+    """
+    default_ankle_keys = inspect.signature(calc_flexor_ratio).parameters['ankle_keys'].default
+    assert default_ankle_keys == ('achilles',)
+
+
+def test_flexor_ratio_default_hip_group_is_psoas_iliacus():
+    """Default hip_keys should be the iliopsoas pair (psoas + iliacus)."""
+    default_hip_keys = inspect.signature(calc_flexor_ratio).parameters['hip_keys'].default
+    assert default_hip_keys == ('psoas', 'iliacus')
+
+
+# ── calc_gastroc_soleus_ratio ────────────────────────────────────────────────────
+
+# Reuses _FLEXOR_KEYS' ordering: soleus, gaslat, gasmed, achilles, psoas, iliacus
+_GASTROC_KEYS = _FLEXOR_KEYS
+
+
+def _gastroc_soleus_fixture():
+    """
+    2 samples, 3 timesteps, 6 outputs ordered per _GASTROC_KEYS.
+    Sample 0: gaslat=gasmed=2 (constant) -> gastroc sum=4; soleus=4 (constant)
+              -> mean ratio = 4/(4+4) = 0.5
+    Sample 1: gaslat=gasmed=1 (constant) -> gastroc sum=2; soleus=6 (constant)
+              -> mean ratio = 2/(2+6) = 0.25
+    """
+    y = np.zeros((2, 3, 6))
+    y[0, :, 1] = [2, 2, 2]   # gaslat
+    y[0, :, 2] = [2, 2, 2]   # gasmed
+    y[0, :, 0] = [4, 4, 4]   # soleus
+    y[1, :, 1] = [1, 1, 1]   # gaslat
+    y[1, :, 2] = [1, 1, 1]   # gasmed
+    y[1, :, 0] = [6, 6, 6]   # soleus
+    return y
+
+
+def test_gastroc_soleus_ratio_known_values_mean():
+    """Default (mean) reduction should match hand-calculated gastroc/(gastroc+soleus)."""
+    y = _gastroc_soleus_fixture()
+    ratio = calc_gastroc_soleus_ratio(y, _GASTROC_KEYS)
+    assert np.allclose(ratio, [0.5, 0.25], atol=1e-6)
+
+
+def test_gastroc_soleus_ratio_shape():
+    """Ratio should return one value per trial."""
+    y = _gastroc_soleus_fixture()
+    ratio = calc_gastroc_soleus_ratio(y, _GASTROC_KEYS)
+    assert ratio.shape == (2,)
+
+
+def test_gastroc_soleus_ratio_peak_reduction():
+    """reduction='peak' should use each signal's peak instead of its stance-mean."""
+    y = np.zeros((1, 3, 6))
+    y[0, :, 1] = [1, 5, 1]   # gaslat, peak=5
+    y[0, :, 2] = [0, 0, 0]   # gasmed
+    y[0, :, 0] = [2, 2, 2]   # soleus, peak=2
+    ratio = calc_gastroc_soleus_ratio(y, _GASTROC_KEYS, reduction='peak')
+    assert np.isclose(ratio[0], 5 / 7, atol=1e-6)
+
+
+def test_gastroc_soleus_ratio_equal_signals_is_half():
+    """Equal gastroc and soleus signals should give ratio 0.5."""
+    y = np.zeros((1, 3, 6))
+    y[0, :, 1] = [3, 3, 3]
+    y[0, :, 2] = [0, 0, 0]
+    y[0, :, 0] = [3, 3, 3]
+    ratio = calc_gastroc_soleus_ratio(y, _GASTROC_KEYS)
+    assert np.isclose(ratio[0], 0.5, atol=1e-6)
+
+
+def test_gastroc_soleus_ratio_invalid_reduction_raises():
+    """An unrecognized reduction mode should raise ValueError."""
+    y = _gastroc_soleus_fixture()
+    with pytest.raises(ValueError):
+        calc_gastroc_soleus_ratio(y, _GASTROC_KEYS, reduction='bogus')
+
+
+# ── calc_dice_per_output ───────────────────────────────────────────────────────
+
+def test_dice_per_output_perfect():
+    """Perfect predictions should give Dice = 1 for all outputs."""
+    y_true, y_pred = _perfect_preds()
+    dice = calc_dice_per_output(y_true, y_pred, verbose=False)
+    assert np.allclose(dice, 1.0, atol=1e-6)
+
+
+def test_dice_per_output_shape():
+    """Dice should return one value per output channel."""
+    y_true, y_pred = _perfect_preds(shape=(50, 100, 6))
+    dice = calc_dice_per_output(y_true, y_pred, verbose=False)
+    assert dice.shape == (6,)
+
+
+def test_dice_per_output_known_values():
+    """Dice should match hand-calculated value for known non-negative curves."""
+    y_true, y_pred = _known_error()
+    dice = calc_dice_per_output(y_true, y_pred, verbose=False)
+    # output 0: true=[1,3], pred=[2,4] -> 2*(1+3)/((1+2)+(3+4)) = 8/10 = 0.8
+    # output 1: true=[2,4], pred=[2,4] -> 2*(2+4)/((2+2)+(4+4)) = 12/12 = 1.0
+    assert np.isclose(dice[0], 0.8, atol=1e-6)
+    assert np.isclose(dice[1], 1.0, atol=1e-6)
+
+
+def test_dice_per_output_zero_preds_is_zero():
+    """All-zero predictions against positive ground truth should give Dice = 0."""
+    y_true, y_pred = _zero_preds()
+    dice = calc_dice_per_output(y_true, y_pred, verbose=False)
+    assert np.allclose(dice, 0.0, atol=1e-6)
+
+
+# ── calc_dice_overall ──────────────────────────────────────────────────────────
+
+def test_dice_overall_perfect():
+    """Perfect predictions should give overall Dice = 1."""
+    y_true, y_pred = _perfect_preds()
+    assert np.isclose(calc_dice_overall(y_true, y_pred), 1.0, atol=1e-6)
+
+
+def test_dice_overall_known_value():
+    """Overall Dice should match hand-calculated value."""
+    y_true, y_pred = _known_error()
+    # flattened: 2*(1+2+3+4)/((1+2)+(2+2)+(3+4)+(4+4)) = 20/22
+    assert np.isclose(calc_dice_overall(y_true, y_pred), 20 / 22, atol=1e-6)
+
+
+# ── calc_dice_per_trial ────────────────────────────────────────────────────────
+
+def test_dice_per_trial_shape():
+    """Per-trial Dice should preserve the sample and output dimensions."""
+    y_true, y_pred = _perfect_preds(shape=(50, 100, 6))
+    dice = calc_dice_per_trial(y_true, y_pred)
+    assert dice.shape == (50, 6)
+
+
+def test_dice_per_trial_known_values():
+    """Per-trial Dice should match hand-calculated per-output values for a single trial."""
+    y_true, y_pred = _known_error()
+    dice = calc_dice_per_trial(y_true, y_pred)
+    assert np.allclose(dice, [[0.8, 1.0]], atol=1e-6)
+
+
+# ── compare_models_wilcoxon ────────────────────────────────────────────────────
+
+def test_wilcoxon_returns_dict_with_expected_keys():
+    """Result should be a dict with 'statistic' and 'p_value' keys."""
+    rng = np.random.default_rng(1)
+    a = rng.normal(size=20)
+    b = rng.normal(size=20)
+    result = compare_models_wilcoxon(a, b)
+    assert set(result.keys()) == {'statistic', 'p_value'}
+
+
+def test_wilcoxon_near_identical_arrays_high_pvalue():
+    """Paired samples with only tiny, non-systematic noise shouldn't be flagged as significant."""
+    rng = np.random.default_rng(0)
+    a = rng.normal(0, 1, 30)
+    b = a + rng.normal(0, 0.01, 30)
+    result = compare_models_wilcoxon(a, b)
+    assert result['p_value'] > 0.05
+
+
+def test_wilcoxon_shifted_arrays_low_pvalue():
+    """A systematic shift between paired samples should be detected as significant."""
+    rng = np.random.default_rng(0)
+    a = rng.normal(0, 1, 30)
+    b = a + 5.0
+    result = compare_models_wilcoxon(a, b)
+    assert result['p_value'] < 0.05

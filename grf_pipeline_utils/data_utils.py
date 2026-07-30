@@ -258,6 +258,7 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
         compiled_segs[subject] = {
             'grf_x': [], 'grf_y': [], 'grf_z': [],
             'cop_x': [], 'cop_z': [],
+            'trial_name': [],
             **{m: [] for m in base_muscles}
         }
         if add_achilles:
@@ -329,6 +330,7 @@ def data_to_segs(muscles, seg_times, problem_trials, grf_pickle_dir, muscle_forc
                     compiled_segs[subject]["grf_z"].append(force_seg_z)
                     compiled_segs[subject]["cop_x"].append(pressure_seg_x)
                     compiled_segs[subject]["cop_z"].append(pressure_seg_z)
+                    compiled_segs[subject]["trial_name"].append(trial_name)
 
                     # muscles in a loop (the whole point)
                     seg_muscles = {}
@@ -493,6 +495,78 @@ def filter_segments(
                 filtered_dict[subj][key] = val
 
     return filtered_dict, dropped, bands
+
+
+def filter_segs_by_metadata(segs, key, values):
+    """
+    Filter a subject-keyed segment dict down to only the segments where
+    segs[subj][key][i] is in `values`, applying the same filter identically to
+    every list-valued signal (including `key` itself) to keep them aligned --
+    mirrors filter_segments' generic list-key handling above. Works for any
+    per-segment metadata key already threaded through data_to_segs (trial_name
+    today; reusable for any future stratification axis without changes here).
+
+    Subjects with zero matching segments are kept with empty lists (not
+    dropped), consistent with how filter_segments behaves. Non-dict entries
+    (e.g. 'time_resampled') pass through unchanged. Returns a new dict --
+    does not mutate `segs`.
+    """
+    out = {}
+    for subj, data in segs.items():
+        if not isinstance(data, dict):
+            out[subj] = data
+            continue
+
+        if key not in data:
+            # Nothing to filter on for this subject -- treat as no matches.
+            out[subj] = {k: ([] if isinstance(v, list) else v) for k, v in data.items()}
+            continue
+
+        n_segs = len(data[key])
+        keep_mask = [v in values for v in data[key]]
+
+        out[subj] = {}
+        for k, v in data.items():
+            if isinstance(v, list) and len(v) == n_segs:
+                out[subj][k] = [item for item, keep in zip(v, keep_mask) if keep]
+            else:
+                out[subj][k] = v
+
+    return out
+
+
+def pack_metadata(split_dict, metadata_keys):
+    """
+    Build parallel subject_id/metadata arrays for a split_dict, in the same
+    (subj, i) iteration order as the split notebooks' dict_to_array -- so the
+    two stay aligned by construction.
+
+    Args:
+        split_dict: {subj: {signal_key: [seg, seg, ...], ...}, ...}
+        metadata_keys: list of per-segment keys already present in each
+            subject's dict (e.g. ['trial_name']) to pack alongside subject_id.
+            Adding a new groupable key later is just adding its name here --
+            this function doesn't hardcode which keys exist.
+
+    Returns:
+        dict mapping 'subject_id' and each entry in metadata_keys to a 1D
+        np.ndarray of length equal to the total segment count, in the same
+        row order dict_to_array would produce for the same split_dict.
+    """
+    packed = {'subject_id': [], **{key: [] for key in metadata_keys}}
+
+    for subj, data in split_dict.items():
+        if metadata_keys:
+            num_segs = len(data[metadata_keys[0]])
+        else:
+            num_segs = len(next(iter(data.values())))
+
+        for i in range(num_segs):
+            packed['subject_id'].append(subj)
+            for key in metadata_keys:
+                packed[key].append(data[key][i])
+
+    return {key: np.array(vals) for key, vals in packed.items()}
 
 
 #Plotting funcions

@@ -169,9 +169,13 @@ training:
 #   Models/Optuna:{Dataset}_v{X}.{Y}_{model}              (full version)
 #   Optuna DB:    models/optuna_v{X}.db                   (one per major version)
 active:
-  uhlrich_version: "2.0"   # current Uhlrich: 5 inputs, +hip JRFs, standard MSE loss
-  silder_version:  "2.0"   # current Silder:  5 inputs, +hip JRFs, standard MSE loss
-
+  uhlrich_version: "3.0"   # current Uhlrich: 5 inputs, +hip JRFs, +subject_id/trial_name metadata
+  silder_version:  "3.0"   # current Silder:  5 inputs, +hip JRFs, +subject_id/trial_name metadata
+history:
+  uhlrichV1.1: "1.1" # 5 inputs, peak-weighted loss
+  silderV1.1:  "1.1" # 5 inputs, peak-weighted loss
+  uhlrichV2.0: "2.0" # 5 inputs, +hip JRFs, standard MSE loss
+  silderV2.0:  "2.0" # 5 inputs, +hip JRFs, standard MSE loss
 
 # ── Reporting ────────────────────────────────────────────────────────────────
 # Standardized output subset used for metric summaries and cross-version comparison.
@@ -194,6 +198,26 @@ reporting:
     - fdl
     - perlong
     - perbrev
+    - iliacus
+    - psoas
+  V1_outputs:
+    - knee_fy
+    - knee_fz
+    - knee_fx
+    - ankle_fy
+    - ankle_fz
+    - ankle_fx
+    - soleus
+    - gasmed
+    - gaslat
+    - tibant
+    - tibpost
+    - edl
+    - fdl
+    - perlong
+    - perbrev
+    - iliacus
+    - psoas
 
 
 # ── Signal definitions ────────────────────────────────────────────────────────
