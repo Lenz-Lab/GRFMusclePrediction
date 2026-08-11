@@ -90,7 +90,7 @@ def calc_flexor_ratio(y, output_keys,
 
 
 def calc_gastroc_soleus_ratio(y, output_keys,
-                               gastroc_keys=('gaslat', 'gasmed'),
+                               gastroc_keys=('gasmed',),
                                soleus_key='soleus',
                                reduction='mean'):
     """Per-trial gastrocnemius / (gastrocnemius + soleus) force ratio, mirroring
@@ -99,10 +99,22 @@ def calc_gastroc_soleus_ratio(y, output_keys,
     phase. That paper used EMG activation; this uses predicted/ground-truth
     muscle FORCE instead (the quantity this model actually predicts), so treat
     it as a force-based proxy for the same underlying redistribution, not a
-    literal reproduction of their EMG numbers. `gastroc_keys` sums the medial
-    and lateral heads into one combined "gastrocnemius" signal, matching the
-    paper's single summary measure used for biofeedback rather than treating
-    medial/lateral as separate ratios.
+    literal reproduction of their EMG numbers.
+
+    Default `gastroc_keys=('gasmed',)` is medial gastrocnemius ALONE, matching
+    the paper's Methods -- their Eq. 3 EMG_gastroc is medial-only, not
+    medial+lateral combined; lateral gastrocnemius gets its own separate,
+    unreported term used only inside their simulation constraint (their
+    Eq. 7), never folded into the headline ratio or the reported 25±15% /
+    17±19% statistics. This matches the ground-truth reproduction in
+    notebooks/Gastroc_Soleus_Activation_Ratio.ipynb and the cross-stratum
+    transfer metric in notebooks/CrossVal.ipynb -- do not reintroduce
+    `gastroc_keys=('gaslat', 'gasmed')` as the default; summing both heads is
+    a different, larger quantity (the denominator is gastroc + soleus, so
+    summing isn't just a rescale) and would silently desync this function
+    from those two notebooks again. Pass `gastroc_keys=('gasmed', 'gaslat')`
+    explicitly if a combined summary measure is deliberately wanted for some
+    other exploration.
 
     `reduction='mean'` (default) matches the paper's stance-averaged EMG
     definition; pass 'peak' for a peak-force variant instead.

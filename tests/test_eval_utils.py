@@ -339,29 +339,41 @@ def test_flexor_ratio_default_hip_group_is_psoas_iliacus():
 _GASTROC_KEYS = _FLEXOR_KEYS
 
 
+def test_gastroc_soleus_ratio_default_gastroc_keys_is_medial_only():
+    """Default gastroc_keys should be medial gastrocnemius ALONE, matching the
+    paper's Eq. 3 Methods (not medial+lateral combined) -- see eval_utils.py's
+    docstring for why summing both heads would be a different quantity, not a
+    rescale, and would desync this function from the two notebooks that
+    reproduce the paper's ground truth."""
+    default_gastroc_keys = inspect.signature(calc_gastroc_soleus_ratio).parameters['gastroc_keys'].default
+    assert default_gastroc_keys == ('gasmed',)
+
+
 def _gastroc_soleus_fixture():
     """
-    2 samples, 3 timesteps, 6 outputs ordered per _GASTROC_KEYS.
-    Sample 0: gaslat=gasmed=2 (constant) -> gastroc sum=4; soleus=4 (constant)
-              -> mean ratio = 4/(4+4) = 0.5
-    Sample 1: gaslat=gasmed=1 (constant) -> gastroc sum=2; soleus=6 (constant)
-              -> mean ratio = 2/(2+6) = 0.25
+    2 samples, 3 timesteps, 6 outputs ordered per _GASTROC_KEYS. gaslat is
+    deliberately left nonzero to prove the medial-only default ignores it.
+    Sample 0: gasmed=2 (constant), gaslat=99 (constant, must be ignored);
+              soleus=4 (constant) -> mean ratio = 2/(2+4) = 0.3333...
+    Sample 1: gasmed=1 (constant), gaslat=99 (constant, must be ignored);
+              soleus=6 (constant) -> mean ratio = 1/(1+6) = 0.142857...
     """
     y = np.zeros((2, 3, 6))
-    y[0, :, 1] = [2, 2, 2]   # gaslat
-    y[0, :, 2] = [2, 2, 2]   # gasmed
-    y[0, :, 0] = [4, 4, 4]   # soleus
-    y[1, :, 1] = [1, 1, 1]   # gaslat
-    y[1, :, 2] = [1, 1, 1]   # gasmed
-    y[1, :, 0] = [6, 6, 6]   # soleus
+    y[0, :, 1] = [99, 99, 99]   # gaslat -- must not affect the default-key result
+    y[0, :, 2] = [2, 2, 2]      # gasmed
+    y[0, :, 0] = [4, 4, 4]      # soleus
+    y[1, :, 1] = [99, 99, 99]   # gaslat -- must not affect the default-key result
+    y[1, :, 2] = [1, 1, 1]      # gasmed
+    y[1, :, 0] = [6, 6, 6]      # soleus
     return y
 
 
 def test_gastroc_soleus_ratio_known_values_mean():
-    """Default (mean) reduction should match hand-calculated gastroc/(gastroc+soleus)."""
+    """Default (mean) reduction should match hand-calculated gasmed/(gasmed+soleus),
+    ignoring gaslat entirely."""
     y = _gastroc_soleus_fixture()
     ratio = calc_gastroc_soleus_ratio(y, _GASTROC_KEYS)
-    assert np.allclose(ratio, [0.5, 0.25], atol=1e-6)
+    assert np.allclose(ratio, [2 / 6, 1 / 7], atol=1e-6)
 
 
 def test_gastroc_soleus_ratio_shape():
@@ -374,8 +386,8 @@ def test_gastroc_soleus_ratio_shape():
 def test_gastroc_soleus_ratio_peak_reduction():
     """reduction='peak' should use each signal's peak instead of its stance-mean."""
     y = np.zeros((1, 3, 6))
-    y[0, :, 1] = [1, 5, 1]   # gaslat, peak=5
-    y[0, :, 2] = [0, 0, 0]   # gasmed
+    y[0, :, 2] = [1, 5, 1]   # gasmed, peak=5
+    y[0, :, 1] = [9, 9, 9]   # gaslat, must be ignored by the medial-only default
     y[0, :, 0] = [2, 2, 2]   # soleus, peak=2
     ratio = calc_gastroc_soleus_ratio(y, _GASTROC_KEYS, reduction='peak')
     assert np.isclose(ratio[0], 5 / 7, atol=1e-6)
@@ -384,9 +396,9 @@ def test_gastroc_soleus_ratio_peak_reduction():
 def test_gastroc_soleus_ratio_equal_signals_is_half():
     """Equal gastroc and soleus signals should give ratio 0.5."""
     y = np.zeros((1, 3, 6))
-    y[0, :, 1] = [3, 3, 3]
-    y[0, :, 2] = [0, 0, 0]
-    y[0, :, 0] = [3, 3, 3]
+    y[0, :, 2] = [3, 3, 3]   # gasmed
+    y[0, :, 1] = [7, 7, 7]   # gaslat, must be ignored by the medial-only default
+    y[0, :, 0] = [3, 3, 3]   # soleus
     ratio = calc_gastroc_soleus_ratio(y, _GASTROC_KEYS)
     assert np.isclose(ratio[0], 0.5, atol=1e-6)
 
@@ -396,6 +408,14 @@ def test_gastroc_soleus_ratio_invalid_reduction_raises():
     y = _gastroc_soleus_fixture()
     with pytest.raises(ValueError):
         calc_gastroc_soleus_ratio(y, _GASTROC_KEYS, reduction='bogus')
+
+
+def test_gastroc_soleus_ratio_explicit_combined_heads():
+    """Explicitly opting into gastroc_keys=('gaslat', 'gasmed') should sum both
+    heads -- the old default, still supported, just no longer automatic."""
+    y = _gastroc_soleus_fixture()
+    ratio = calc_gastroc_soleus_ratio(y, _GASTROC_KEYS, gastroc_keys=('gaslat', 'gasmed'))
+    assert np.allclose(ratio, [(99 + 2) / (99 + 2 + 4), (99 + 1) / (99 + 1 + 6)], atol=1e-6)
 
 
 # ── calc_dice_per_output ───────────────────────────────────────────────────────
