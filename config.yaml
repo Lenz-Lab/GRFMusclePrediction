@@ -163,17 +163,31 @@ training:
 #   Minor (Y) — bump for training-only changes (loss function, Optuna re-tune,
 #               architecture experiments). Reuses existing segments and splits.
 #
-# File naming:
+# File naming (muscle+JRF family):
 #   Segments:     {Dataset}_segs_v{X}_normalized_filtered
 #   Splits:       {Dataset}_v{X}_{split}_data.npz         (major only)
 #   Models/Optuna:{Dataset}_v{X}.{Y}_{model}              (full version)
 #   Optuna DB:    models/optuna_v{X}.db                   (one per major version)
+#
+# Torque family (v4+, active.*_torque_version): predicts the OpenSim Inverse
+# Dynamics coordinate set instead of muscle forces + JRFs. A fully parallel
+# track -- separate active version, separate signals list
+# (signals.torque_outputs), separate file namespace so it can never collide
+# with the muscle+JRF family at the same version number:
+#   Segments:     {Dataset}_torque_segs_v{X}_normalized_filtered
+#   Splits:       {Dataset}_torque_v{X}_{split}_data.npz   (major only)
+#   Models/Optuna:{Dataset}_torque_v{X}.{Y}_{model}
+#   Optuna DB:    models/optuna_torque_v{X}.db
 active:
   uhlrich_version: "3.0"   # current Uhlrich: 5 inputs, +hip JRFs, +subject_id/trial_name metadata
   silder_version:  "3.0"   # current Silder:  5 inputs, +hip JRFs, +subject_id/trial_name metadata
+  uhlrich_torque_version: "4.0"   # torque family: 5 inputs -> full ID coordinate set (joint torques)
+  silder_torque_version:  "4.0"   # torque family: 5 inputs -> full ID coordinate set (joint torques)
 history:
   uhlrichV1.1: "1.1" # 5 inputs, peak-weighted loss
+  uhlrichV1.2: "1.2" #5 inputs, standard MSE loss
   silderV1.1:  "1.1" # 5 inputs, peak-weighted loss
+  silderV1.2: "1.2" # 5 inputs, standard MSE loss
   uhlrichV2.0: "2.0" # 5 inputs, +hip JRFs, standard MSE loss
   silderV2.0:  "2.0" # 5 inputs, +hip JRFs, standard MSE loss
 
@@ -181,6 +195,18 @@ history:
 # Standardized output subset used for metric summaries and cross-version comparison.
 # Compare_Models reads this; individual plotting cells can override with SUBSET_KEYS.
 reporting:
+  # Declarative metric selection -- notebooks and the dashboard read this to
+  # decide which per-output metrics to compute/emit and which to headline in
+  # model-comparison views. Each name must correspond to a function in
+  # grf_pipeline_utils/eval_utils.py (e.g. 'rrmse' -> calc_rrmse_*, 'auc' ->
+  # calc_auc_*). Adding a name here with no matching eval_utils function does
+  # nothing -- this list only selects from what already exists, it doesn't
+  # generate anything on its own. ('auc' is currently one such placeholder --
+  # no calc_auc_* exists yet.)
+  primary_metric: subset_rrmse_w
+  metrics: [rrmse, mae, r2, auc]     # per-output metrics to compute/emit
+  comparison_metrics: [auc, dice]    # model-comparison view
+
   primary_outputs:
     - hip_fy
     - hip_fz
@@ -191,7 +217,9 @@ reporting:
     - ankle_fy
     - ankle_fz
     - ankle_fx
-    - achilles
+    - gaslat
+    - gasmed
+    - soleus
     - tibant
     - tibpost
     - edl
@@ -218,6 +246,36 @@ reporting:
     - perbrev
     - iliacus
     - psoas
+  V2_outputs:
+    - hip_fy
+    - hip_fz
+    - hip_fx
+    - knee_fy
+    - knee_fz
+    - knee_fx
+    - ankle_fy
+    - ankle_fz
+    - ankle_fx
+    - gaslat
+    - gasmed
+    - soleus
+    - tibant
+    - tibpost
+    - edl
+    - fdl
+    - perlong
+    - perbrev
+    - iliacus
+    - psoas
+  # Torque family (v4+) subset for metric summaries -- parallel to
+  # primary_outputs above, used when DATASET_FAMILY='torque'.
+  torque_primary_outputs:
+    - hip_flexion_moment
+    - hip_adduction_moment
+    - hip_rotation_moment
+    - knee_angle_moment
+    - ankle_angle_moment
+    - subtalar_angle_moment
 
 
 # ── Signal definitions ────────────────────────────────────────────────────────
@@ -278,3 +336,26 @@ signals:
     - ankle_fx
     - ankle_fy
     - ankle_fz
+
+  # Torque family (v4+): full OpenSim Inverse Dynamics coordinate set.
+  # Parallel to `outputs` above, not an extension of it -- a v4 dataset uses
+  # this list instead of `outputs`. pelvis_*/lumbar_* are whole-body
+  # (single column, no _r/_l split); the rest are lateralized per limb.
+  torque_outputs:
+    - pelvis_tilt_moment
+    - pelvis_list_moment
+    - pelvis_rotation_moment
+    - pelvis_tx_force
+    - pelvis_ty_force
+    - pelvis_tz_force
+    - lumbar_extension_moment
+    - lumbar_bending_moment
+    - lumbar_rotation_moment
+    - hip_flexion_moment
+    - hip_adduction_moment
+    - hip_rotation_moment
+    - knee_angle_moment
+    - knee_angle_beta_force
+    - ankle_angle_moment
+    - subtalar_angle_moment
+    - mtp_angle_moment

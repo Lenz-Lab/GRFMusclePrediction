@@ -4,10 +4,12 @@ import numpy as np
 import pytest
 
 from grf_pipeline_utils.eval_utils import (
+    calc_auc_overall,
+    calc_auc_per_output,
+    calc_auc_per_trial,
     calc_dice_overall,
     calc_dice_per_output,
     calc_dice_per_trial,
-    calc_flexor_ratio,
     calc_gastroc_soleus_ratio,
     calc_mae_overall,
     calc_mae_per_output,
@@ -275,68 +277,9 @@ def test_mae_overall_known_error():
     assert np.isclose(calc_mae_overall(y_true, y_pred), 0.5, atol=1e-6)
 
 
-# ── calc_flexor_ratio ──────────────────────────────────────────────────────────
-
-_FLEXOR_KEYS = ['soleus', 'gaslat', 'gasmed', 'achilles', 'psoas', 'iliacus']
-
-
-def _flexor_fixture():
-    """
-    2 samples, 3 timesteps, 6 outputs ordered per _FLEXOR_KEYS.
-    Sample 0: ankle group (soleus only) peaks at 3, hip group (psoas only) peaks at 1 -> ratio 3.0
-    Sample 1: ankle group peaks at 2, hip group (psoas only) peaks at 4 -> ratio 0.5
-    """
-    y = np.zeros((2, 3, 6))
-    y[0, :, 0] = [1, 2, 3]   # soleus
-    y[0, :, 4] = [1, 1, 1]   # psoas
-    y[1, :, 0] = [2, 2, 2]   # soleus
-    y[1, :, 4] = [4, 4, 4]   # psoas
-    return y
-
-
-def test_flexor_ratio_known_values():
-    """Ratio should match hand-calculated peak-ankle / peak-hip per trial."""
-    y = _flexor_fixture()
-    ratio = calc_flexor_ratio(y, _FLEXOR_KEYS, ankle_keys=('soleus',), hip_keys=('psoas',))
-    assert np.allclose(ratio, [3.0, 0.5], atol=1e-6)
-
-
-def test_flexor_ratio_shape():
-    """Ratio should return one value per trial."""
-    y = _flexor_fixture()
-    ratio = calc_flexor_ratio(y, _FLEXOR_KEYS, ankle_keys=('soleus',), hip_keys=('psoas',))
-    assert ratio.shape == (2,)
-
-
-def test_flexor_ratio_equal_groups_is_one():
-    """Identical ankle and hip group magnitudes should give ratio 1.0."""
-    y = np.zeros((1, 3, 6))
-    y[0, :, 0] = [1, 2, 3]   # soleus (ankle group)
-    y[0, :, 4] = [1, 2, 3]   # psoas (hip group)
-    ratio = calc_flexor_ratio(y, _FLEXOR_KEYS, ankle_keys=('soleus',), hip_keys=('psoas',))
-    assert np.isclose(ratio[0], 1.0, atol=1e-6)
-
-
-def test_flexor_ratio_default_ankle_group_is_achilles_only():
-    """
-    Default ankle_keys must be ('achilles',) alone -- 'achilles' is already the
-    derived sum of soleus + gaslat + gasmed (see data_utils.py), so including
-    those muscles too would double/triple-count their contribution.
-    """
-    default_ankle_keys = inspect.signature(calc_flexor_ratio).parameters['ankle_keys'].default
-    assert default_ankle_keys == ('achilles',)
-
-
-def test_flexor_ratio_default_hip_group_is_psoas_iliacus():
-    """Default hip_keys should be the iliopsoas pair (psoas + iliacus)."""
-    default_hip_keys = inspect.signature(calc_flexor_ratio).parameters['hip_keys'].default
-    assert default_hip_keys == ('psoas', 'iliacus')
-
-
 # ── calc_gastroc_soleus_ratio ────────────────────────────────────────────────────
 
-# Reuses _FLEXOR_KEYS' ordering: soleus, gaslat, gasmed, achilles, psoas, iliacus
-_GASTROC_KEYS = _FLEXOR_KEYS
+_GASTROC_KEYS = ['soleus', 'gaslat', 'gasmed', 'achilles', 'psoas', 'iliacus']
 
 
 def test_gastroc_soleus_ratio_default_gastroc_keys_is_medial_only():
@@ -480,6 +423,77 @@ def test_dice_per_trial_known_values():
     y_true, y_pred = _known_error()
     dice = calc_dice_per_trial(y_true, y_pred)
     assert np.allclose(dice, [[0.8, 1.0]], atol=1e-6)
+
+
+# ── calc_auc_per_output ────────────────────────────────────────────────────────
+
+def test_auc_per_output_perfect():
+    """Perfect predictions should give AUC = 1 for all outputs."""
+    y_true, y_pred = _perfect_preds()
+    auc = calc_auc_per_output(y_true, y_pred, verbose=False)
+    assert np.allclose(auc, 1.0, atol=1e-6)
+
+
+def test_auc_per_output_shape():
+    """AUC should return one value per output channel."""
+    y_true, y_pred = _perfect_preds(shape=(50, 100, 6))
+    auc = calc_auc_per_output(y_true, y_pred, verbose=False)
+    assert auc.shape == (6,)
+
+
+def test_auc_per_output_known_values():
+    """AUC should match hand-calculated trapezoidal overlap for known curves."""
+    y_true, y_pred = _known_error()
+    auc = calc_auc_per_output(y_true, y_pred, verbose=False)
+    # output 0: true=[1,3], pred=[2,4] -> trapz(min)=trapz([1,3])=2.0, trapz(max)=trapz([2,4])=3.0 -> 2/3
+    # output 1: true=[2,4], pred=[2,4] (identical) -> 1.0
+    assert np.isclose(auc[0], 2 / 3, atol=1e-6)
+    assert np.isclose(auc[1], 1.0, atol=1e-6)
+
+
+def test_auc_per_output_zero_preds_is_zero():
+    """All-zero predictions against positive ground truth should give AUC = 0."""
+    y_true, y_pred = _zero_preds()
+    auc = calc_auc_per_output(y_true, y_pred, verbose=False)
+    assert np.allclose(auc, 0.0, atol=1e-6)
+
+
+# ── calc_auc_overall ───────────────────────────────────────────────────────────
+
+def test_auc_overall_perfect():
+    """Perfect predictions should give overall AUC = 1."""
+    y_true, y_pred = _perfect_preds()
+    assert np.isclose(calc_auc_overall(y_true, y_pred), 1.0, atol=1e-6)
+
+
+def test_auc_overall_known_value():
+    """Overall AUC should match hand-calculated value (areas summed across outputs)."""
+    y_true, y_pred = _known_error()
+    # total min area = 2.0 + 3.0 = 5.0; total max area = 3.0 + 3.0 = 6.0 -> 5/6
+    assert np.isclose(calc_auc_overall(y_true, y_pred), 5 / 6, atol=1e-6)
+
+
+def test_auc_overall_constant_curve_ratio():
+    """Constant curves reduce to a plain ratio, independent of duration."""
+    y_true = np.full((1, 10, 1), 2.0)
+    y_pred = np.full((1, 10, 1), 1.0)
+    assert np.isclose(calc_auc_overall(y_true, y_pred), 0.5, atol=1e-9)
+
+
+# ── calc_auc_per_trial ─────────────────────────────────────────────────────────
+
+def test_auc_per_trial_shape():
+    """Per-trial AUC should preserve the sample and output dimensions."""
+    y_true, y_pred = _perfect_preds(shape=(50, 100, 6))
+    auc = calc_auc_per_trial(y_true, y_pred)
+    assert auc.shape == (50, 6)
+
+
+def test_auc_per_trial_known_values():
+    """Per-trial AUC should match hand-calculated per-output values for a single trial."""
+    y_true, y_pred = _known_error()
+    auc = calc_auc_per_trial(y_true, y_pred)
+    assert np.allclose(auc, [[2 / 3, 1.0]], atol=1e-6)
 
 
 # ── compare_models_wilcoxon ────────────────────────────────────────────────────

@@ -66,29 +66,6 @@ def calc_mae_overall(y_true, y_pred):
     return np.mean(np.abs(y_true.flatten() - y_pred.flatten()))
 
 
-def calc_flexor_ratio(y, output_keys,
-                       ankle_keys=('achilles',),
-                       hip_keys=('psoas', 'iliacus')):
-    """Per-trial ratio of peak combined ankle-plantarflexor force to peak combined
-    hip-flexor force. Reflects the distal->proximal load-redistribution pattern
-    studied across the Y/OA cohorts.
-
-    Default `ankle_keys` is 'achilles' alone: that output channel is already the
-    derived sum of soleus + gaslat + gasmed (see data_utils.py), so including
-    those muscles alongside it would double/triple-count their contribution.
-    """
-    ankle_idxs = [output_keys.index(k) for k in ankle_keys]
-    hip_idxs = [output_keys.index(k) for k in hip_keys]
-
-    ankle_signal = y[:, :, ankle_idxs].sum(axis=2)  # (n_samples, seq_len)
-    hip_signal = y[:, :, hip_idxs].sum(axis=2)
-
-    peak_ankle = ankle_signal.max(axis=1)  # (n_samples,)
-    peak_hip = hip_signal.max(axis=1)
-
-    return peak_ankle / peak_hip
-
-
 def calc_gastroc_soleus_ratio(y, output_keys,
                                gastroc_keys=('gasmed',),
                                soleus_key='soleus',
@@ -159,6 +136,40 @@ def calc_dice_per_trial(y_true, y_pred):
     overlap = np.sum(np.minimum(y_true, y_pred), axis=1)
     total = np.sum(y_true + y_pred, axis=1)
     return 2 * overlap / total  # (n_samples, n_outputs)
+
+
+def calc_auc_per_output(y_true, y_pred, labels=None, verbose=True):
+    """Trapezoidal overlap coefficient ("integral agreement") per output:
+    integral of min(true, pred) over integral of max(true, pred), aggregated
+    over all samples then reduced per output. Bounded [0, 1]; 1 = perfect
+    overlap. Assumes non-negative curves (static-optimization forces), same
+    as calc_dice_per_output. NOT a rescaled Dice: this integrates with
+    np.trapezoid (weights by time spacing) rather than summing samples pointwise
+    — identical to Dice for evenly-sampled data up to the constant dt factor
+    that cancels in the ratio, but a distinct construction, kept separate
+    per config.yaml's reporting.metrics list.
+    """
+    min_area = np.trapezoid(np.minimum(y_true, y_pred), axis=1).sum(axis=0)  # (n_outputs,)
+    max_area = np.trapezoid(np.maximum(y_true, y_pred), axis=1).sum(axis=0)
+    auc = min_area / max_area
+    if verbose and labels is not None:
+        for lbl, v in zip(labels, auc):
+            print(f'  {lbl}: {v:.4f}')
+    return auc
+
+
+def calc_auc_overall(y_true, y_pred):
+    min_area = np.trapezoid(np.minimum(y_true, y_pred), axis=1).sum()
+    max_area = np.trapezoid(np.maximum(y_true, y_pred), axis=1).sum()
+    return float(min_area / max_area)
+
+
+def calc_auc_per_trial(y_true, y_pred):
+    """Unreduced per-trial, per-output AUC — used to feed compare_models_wilcoxon,
+    same role as calc_dice_per_trial."""
+    min_area = np.trapezoid(np.minimum(y_true, y_pred), axis=1)  # (n_samples, n_outputs)
+    max_area = np.trapezoid(np.maximum(y_true, y_pred), axis=1)
+    return min_area / max_area
 
 
 def compare_models_wilcoxon(metric_a, metric_b, alternative='two-sided'):
