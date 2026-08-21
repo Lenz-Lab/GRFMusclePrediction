@@ -1,0 +1,93 @@
+{# Shared by result_detail.html and predict.html -- both eventually produce the
+   same shape (table + per_output_charts, see render.build_models_table /
+   render.build_per_output_charts), one from a saved metrics.yaml, the other
+   from a live inference run (api/inference.py's summarize_run). Uses the
+   calling template's context directly (dataset/dict include, no `with`). #}
+{% import "_macros.html" as m %}
+
+{% if chart_svg %}
+  <h2>{{ primary_metric }} by model</h2>
+  {{ chart_svg | safe }}
+  {% if reference %}
+    <p class="muted">- - - {{ reference.label }}: {{ reference.value | fmt }}</p>
+  {% endif %}
+{% endif %}
+
+{% if table.rows %}
+  <h2>Model comparison</h2>
+  <p class="muted"><a href="/metrics">what do these metrics mean?</a></p>
+  <table>
+    <tr><th>metric</th>{% for name in table.model_names %}<th>{{ name }}</th>{% endfor %}</tr>
+    {% for row in table.rows %}
+    <tr>
+      <td>
+        {{ row.metric }}
+        {% if row.reference %}
+          <span class="ref-badge" title="{{ row.reference.label }}">&rarr; {{ row.reference.value | fmt }}</span>
+        {% endif %}
+      </td>
+      {% for name in table.model_names %}<td>{{ row.by_model.get(name) | fmt_unit(row.metric) }}</td>{% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+{% endif %}
+
+{% if per_output_charts %}
+  <h2>Per-output metrics</h2>
+  <div class="output-block">
+    <div class="output-controls">
+      <select class="output-select" onchange="switchOutputChart(this)">
+        {% for chart in per_output_charts %}
+          <option value="output-panel-{{ loop.index0 }}">{{ chart.field_name }}</option>
+        {% endfor %}
+      </select>
+      <input type="text" class="output-filter" placeholder="filter outputs (e.g. tib, ankle)…"
+             oninput="filterOutputRows(this)">
+      <button type="button" class="output-save" onclick="saveOutputChart(this)">Pin this view</button>
+    </div>
+
+    {% for chart in per_output_charts %}
+    <div class="output-panel" id="output-panel-{{ loop.index0 }}"
+         {% if not loop.first %}style="display:none"{% endif %}>
+      <div class="output-legend">
+        {% for mc in chart.model_names %}
+          <span class="legend-item"><span class="swatch" style="background:{{ mc.color }}"></span>{{ mc.name }}</span>
+        {% endfor %}
+      </div>
+      <div class="output-chart">
+        {% for row in chart.rows %}
+        <div class="output-row" data-key="{{ row.key | lower }}">
+          <div class="output-label">
+            {{ row.key }}
+            {% if row.in_subset %}<span class="subset-tag" title="in the reported subset">subset</span>{% endif %}
+          </div>
+          <div class="output-bars">
+            {% for bar in row.bars %}
+              <div class="output-bar-line">
+                <div class="output-bar" style="width: {{ bar.pct }}%; background: {{ bar.color }};"
+                     title="{{ bar.model }}"></div>
+                <span class="output-bar-value">{{ bar.value | fmt_unit(chart.field_name) }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="pinned-output-charts" class="pinned-output-charts" style="display:none">
+    <h2>Pinned views</h2>
+    <div class="pinned-grid" id="pinned-output-grid"></div>
+  </div>
+{% endif %}
+
+{% if table.nested %}
+  {% for name, nested_fields in table.nested.items() %}
+    {% if nested_fields %}
+      <h2>{{ name }} — additional fields</h2>
+      {{ m.render_value(nested_fields) }}
+    {% endif %}
+  {% endfor %}
+{% endif %}

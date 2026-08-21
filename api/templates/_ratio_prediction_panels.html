@@ -1,0 +1,38 @@
+{# Fragment (no {% extends %}) -- rendered standalone by GET
+   /results/{id}/ratio-predictions, both as the fetch() response body
+   (see loadLivePredictions in base.html) and as a plain-navigation no-JS
+   fallback. Content-only: the caller's page already has the surrounding
+   <h2>/explanation text (see _transfer_comparison.html). #}
+{% if ratio_prediction_panels %}
+  <div class="ratio-legend">
+    <span class="legend-item">
+      <span class="legend-swatch"></span> ground truth
+    </span>
+    {% if best_models.base_trained %}
+      <span class="legend-item">
+        <span class="legend-swatch" style="color: {{ best_models.base_trained.color }}"></span>
+        {{ best_models.base_trained.model }} (base-trained)
+      </span>
+    {% endif %}
+    {% if best_models.ret_trained %}
+      <span class="legend-item">
+        <span class="legend-swatch legend-dashed"
+              style="color: {{ best_models.ret_trained.color }}"></span>
+        {{ best_models.ret_trained.model }} (ret-trained)
+      </span>
+    {% endif %}
+  </div>
+  <div class="subject-scroll">
+    {% for panel in ratio_prediction_panels %}
+      <div class="subject-card {% if panel.any_flagged %}subject-card-flagged{% endif %}">
+        <h4>{{ panel.subject }}</h4>
+        {{ panel.svg | safe }}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="muted">
+    No live predictions available — couldn't find matching test data or
+    model weights for this result.
+  </p>
+{% endif %}

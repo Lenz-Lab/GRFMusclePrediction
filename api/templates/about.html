@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}About{% endblock %}
+{% block content %}
+  <h1>About</h1>
+  <p class="tagline">What are we doing?</p>
+
+  <section class="about-background">
+    <p>
+      You can't stick a sensor directly on a muscle and ask it how hard it's pulling.
+      Biomechanics research labs do the next best thing: track how the body moves using
+      markered motion capture with sub-millimeter precision and sensors that measure how
+      hard the foot hits the ground. The data is then worked 'backwards' through a
+      musculoskeletal simulation
+      (<a href="https://opensim.stanford.edu/" target="_blank" rel="noopener">OpenSim</a>)
+      to estimate everything in between: joint moments via inverse dynamics, then
+      individual muscle forces using static optimization.
+    </p>
+    <p>
+      The final step of that process is the most challenging. A single leg has 30+ muscles
+      crossing the hip, knee, and ankle, but those joints only have a handful of degrees of
+      freedom between them. There are infinitely more muscles than equations. Any given
+      joint moment can be produced by countless different muscle-coordination strategies.
+      Solving it requires an optimizer that typically functions by minimizing total muscle
+      effort.
+    </p>
+    <p>
+      The motivation behind this project is that motion capture labs are expensive in
+      money and time. Ground reaction forces are comparatively cheap and increasingly
+      everywhere: force plates, instrumented walkways, and even insoles are seeing research
+      and commercial use. If a model can learn the mapping from force plate input alone to
+      what the full mocap-plus-OpenSim pipeline would have said, you get non-invasive
+      muscle-force estimates without the lab.
+    </p>
+  </section>
+
+  <section class="about-readme">
+    <h2>Project README</h2>
+    <div class="readme-body">
+      {{ readme_html | safe }}
+    </div>
+  </section>
+{% endblock %}

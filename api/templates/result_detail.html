@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block title %}{{ result.id }}{% endblock %}
+{% block content %}
+  <p><a href="/">&larr; all results</a></p>
+  <h1>{{ result.id }}</h1>
+  <table class="nested">
+    <tr><th>eval_type</th><td><span class="pill pill-{{ result.eval_type }}">{{ result.eval_type }}</span></td></tr>
+    <tr><th>version</th><td>{{ result.version | fmt }}</td></tr>
+    <tr><th>dataset</th><td>{{ result.dataset | fmt }}</td></tr>
+    <tr><th>dataset_version</th><td>{{ result.dataset_version | fmt }}</td></tr>
+    <tr><th>stratum</th><td>{{ result.stratum | fmt }}</td></tr>
+    <tr><th>date</th><td>{{ result.date | fmt }}</td></tr>
+    {% if result.primary_metric %}
+      <tr><th>primary_metric</th><td><code>{{ result.primary_metric }}</code></td></tr>
+    {% endif %}
+    {% if result.subset %}
+      <tr>
+        <th>subset</th>
+        <td>
+          <details class="subset-details">
+            <summary>
+              {{ result.subset | length }} of the full output set — reported/headlined here
+            </summary>
+            <p class="muted">{{ result.subset | join(', ') }}</p>
+          </details>
+        </td>
+      </tr>
+    {% endif %}
+  </table>
+
+  {% if result.eval_type == 'cross_stratum_transfer' %}
+    {% include "_transfer_comparison.html" %}
+  {% else %}
+    {% include "_model_comparison.html" %}
+  {% endif %}
+
+  {% if result.extra %}
+    <h2>Other fields</h2>
+    {{ m.render_value(result.extra) }}
+  {% endif %}
+{% endblock %}

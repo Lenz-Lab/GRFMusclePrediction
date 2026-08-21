@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}GRF Results{% endblock %} — GRF Muscle Prediction</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --accent: #AB202D;
+      --accent-2: #7C3AED;
+      --danger: #DC2626;
+      --card-bg: light-dark(#fff, #1c1c1e);
+      --border: #8883;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      max-width: 1150px; margin: 0 auto; padding: 1.5rem;
+      line-height: 1.45;
+    }
+    nav {
+      margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 2px solid var(--accent);
+      display: flex; align-items: baseline; gap: 0.3rem;
+    }
+    nav .brand { font-weight: 800; margin-right: auto; }
+    nav a { margin-left: 1.1rem; text-decoration: none; font-weight: 600; opacity: 0.85; }
+    nav a:hover { opacity: 1; text-decoration: underline; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.15rem; }
+    h2 { font-size: 1.05rem; margin-top: 2rem; }
+    .tagline { opacity: 0.6; margin-top: 0; margin-bottom: 1.25rem; }
+    table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; }
+    th, td { text-align: left; padding: 0.35rem 0.6rem; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; }
+    tr:hover { background: #8881; }
+    table.nested, table.nested th, table.nested td { border: none; padding: 0.1rem 0.4rem; margin: 0; }
+    table.nested { width: auto; }
+    ul.nested-list { margin: 0; padding-left: 1.1rem; }
+
+    .subset-details summary { cursor: pointer; font-size: 0.85rem; opacity: 0.85; }
+    .subset-details summary:hover { opacity: 1; }
+    .subset-details p { margin: 0.4rem 0 0; max-width: 60ch; }
+    .subset-tag {
+      display: inline-block; font-size: 0.62rem; font-weight: 700; opacity: 0.7;
+      border: 1px solid var(--border); border-radius: 0.5rem; padding: 0 0.3rem;
+      margin-left: 0.35rem; vertical-align: middle; text-transform: uppercase;
+    }
+
+    .pill {
+      display: inline-block; padding: 0.15rem 0.6rem; border-radius: 1rem;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em;
+      background: #8882; margin-right: 0.3rem; text-transform: lowercase;
+    }
+    .pill-single_split { background: #AB202D30; color: #AB202D; }
+    .pill-cross_validation { background: #7C3AED30; color: #7C3AED; }
+    .pill-cross_stratum_transfer { background: #0D948830; color: #0D9488; }
+    .pill-unknown { background: #8882; }
+
+    .muted { opacity: 0.65; font-size: 0.85rem; }
+    .filters { margin-bottom: 1.25rem; display: flex; gap: 0.5rem; }
+    .filters input {
+      padding: 0.35rem 0.6rem; border-radius: 0.5rem; border: 1px solid var(--border);
+      background: transparent; color: inherit;
+    }
+    .filters button {
+      padding: 0.35rem 0.9rem; border-radius: 0.5rem; border: none;
+      background: var(--accent); color: white; font-weight: 600; cursor: pointer;
+    }
+    a.rowlink { text-decoration: none; color: inherit; display: block; }
+    code { font-size: 0.85em; }
+
+    .card-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 0.9rem; margin-top: 1rem;
+    }
+    .card {
+      border: 1px solid var(--border); border-radius: 0.75rem; padding: 0.9rem 1rem;
+      text-decoration: none; color: inherit; background: var(--card-bg);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      display: block;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px #0002; }
+    .card h3 { margin: 0 0 0.3rem; font-size: 0.95rem; word-break: break-word; }
+    .card .meta { font-size: 0.78rem; opacity: 0.65; margin-bottom: 0.5rem; }
+    .metric-caption { font-size: 0.72rem; opacity: 0.6; margin-top: 0.35rem; }
+
+    .barchart .bar-label { font-size: 10px; fill: currentColor; opacity: 0.8; }
+    .barchart .bar-value { font-size: 10px; fill: currentColor; opacity: 0.9; font-weight: 600; }
+    .waveform .axis-label { font-size: 10px; fill: currentColor; opacity: 0.6; }
+    .waveform .axis-tick { font-size: 9px; fill: currentColor; opacity: 0.55; }
+    .waveform .axis-line { stroke: currentColor; stroke-opacity: 0.35; stroke-width: 1; }
+
+    .slopechart .axis-label { font-size: 10px; fill: currentColor; opacity: 0.6; }
+    .slopechart .slope-row:hover line { stroke-opacity: 1; }
+    .slopechart .slope-row:hover circle { fill-opacity: 1; }
+    .slopechart .slope-flagged circle { stroke: var(--danger); stroke-width: 2; }
+
+    .subject-scroll {
+      display: flex; gap: 0.8rem; overflow-x: auto; padding: 0.3rem 0.1rem 0.8rem;
+      margin-bottom: 1rem;
+    }
+    .subject-card {
+      flex: 0 0 auto; border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.5rem 0.6rem;
+    }
+    .subject-card h4 { margin: 0 0 0.2rem; font-size: 0.85rem; }
+    .subject-card-flagged { border-color: var(--danger); }
+
+    .ratio-legend {
+      display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.6rem; font-size: 0.8rem;
+    }
+    .legend-item { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .legend-swatch {
+      display: inline-block; width: 18px; height: 0; border-top: 2px solid currentColor;
+      color: inherit;
+    }
+    .legend-swatch.legend-dashed { border-top-style: dashed; }
+    .ratio-predictions-container .pin-run { margin-right: 0.6rem; }
+
+    .ref-badge {
+      font-size: 0.72rem; opacity: 0.6; margin-left: 0.4rem; font-weight: 500;
+    }
+
+    .output-legend { display: flex; gap: 1rem; margin: 0.5rem 0; font-size: 0.8rem; }
+    .legend-item { display: flex; align-items: center; gap: 0.3rem; opacity: 0.8; }
+    .swatch { width: 0.7rem; height: 0.7rem; border-radius: 2px; display: inline-block; }
+
+    .output-controls { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
+    .output-select, .output-filter {
+      padding: 0.45rem 0.7rem; border-radius: 0.5rem;
+      border: 1px solid var(--border); background: transparent; color: inherit;
+    }
+    .output-select { font-weight: 600; }
+    .output-filter { flex: 1; }
+    .output-save {
+      padding: 0.45rem 0.9rem; border-radius: 0.5rem; border: 1px solid var(--border);
+      background: transparent; color: inherit; cursor: pointer; font-weight: 600;
+      white-space: nowrap;
+    }
+    .output-save:hover { border-color: var(--accent); }
+    .output-chart { max-height: 420px; overflow-y: auto; border: 1px solid var(--border);
+      border-radius: 0.5rem; padding: 0.3rem 0.6rem; }
+    .output-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0; }
+    .output-row + .output-row { border-top: 1px solid #8881; }
+    .output-label {
+      width: 140px; flex-shrink: 0; font-size: 0.8rem; opacity: 0.85;
+      display: flex; align-items: center; flex-wrap: wrap; gap: 0.15rem;
+    }
+    .output-bars { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+    .output-bar-line { display: flex; align-items: center; gap: 0.4rem; }
+    .output-bar { height: 10px; border-radius: 3px; min-width: 2px; }
+    .output-bar-value { font-size: 0.7rem; opacity: 0.7; min-width: 3.5em; }
+
+    .pinned-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 0.9rem;
+    }
+    .pinned-chart {
+      border: 1px solid var(--border); border-radius: 0.75rem; padding: 0.75rem;
+      background: var(--card-bg);
+    }
+    .pinned-chart-header {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 0.4rem; gap: 0.5rem;
+    }
+    .pinned-chart-title { font-weight: 600; font-size: 0.85rem; }
+    .pinned-chart-remove {
+      border: none; background: transparent; color: inherit; opacity: 0.5;
+      cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 0.2rem;
+    }
+    .pinned-chart-remove:hover { opacity: 1; }
+    .pinned-chart .output-chart { max-height: 320px; }
+
+    .predict-form select { flex: 1; min-width: 0; }
+    .predict-error {
+      background: color-mix(in srgb, var(--danger) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+      border-radius: 0.5rem; padding: 0.6rem 0.9rem; font-size: 0.85rem; white-space: pre-wrap;
+    }
+    .predict-nav { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.5rem; }
+    .predict-nav a.disabled { opacity: 0.3; pointer-events: none; }
+    .predict-nav a.pin-run { margin-left: auto; font-weight: 600; }
+    .waveform polyline { vector-effect: non-scaling-stroke; }
+
+    .run-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0 1.5rem; }
+    .run-chip {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.25rem 0.6rem; border-radius: 1rem; border: 1px solid var(--border);
+      font-size: 0.8rem;
+    }
+    .run-chip a { text-decoration: none; opacity: 0.5; font-weight: 700; }
+    .run-chip a:hover { opacity: 1; }
+    .pinned-chart-agg { font-size: 0.72rem; opacity: 0.75; margin: 0.3rem 0 0.5rem; }
+
+    .about-background p { max-width: 68ch; }
+    .about-readme { margin-top: 2.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+    .readme-body :is(h1, h2, h3) { margin-top: 1.6rem; }
+    .readme-body h1 { font-size: 1.3rem; }
+    .readme-body h2 { font-size: 1.1rem; margin-top: 1.8rem; }
+    .readme-body h3 { font-size: 0.98rem; }
+    .readme-body p, .readme-body li { max-width: 72ch; }
+    .readme-body a { color: var(--accent); }
+    .readme-body pre {
+      background: #8881; border-radius: 0.5rem; padding: 0.75rem 1rem;
+      overflow-x: auto; font-size: 0.82rem;
+    }
+    .readme-body code { background: #8881; border-radius: 0.3rem; padding: 0.1rem 0.35rem; }
+    .readme-body pre code { background: none; padding: 0; }
+    .readme-body img { max-width: 100%; }
+    .readme-body blockquote {
+      margin: 0.75rem 0; padding: 0.25rem 1rem; border-left: 3px solid var(--accent);
+      opacity: 0.85;
+    }
+
+    .ratio-callout {
+      background: color-mix(in srgb, var(--accent-2) 8%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent-2) 30%, transparent);
+      border-radius: 0.5rem; padding: 0.75rem 1rem; margin: 0.75rem 0 1.5rem;
+    }
+    .ratio-callout p { margin: 0.3rem 0 0; max-width: 72ch; }
+    .ratio-callout-howto { background: color-mix(in srgb, var(--border) 15%, transparent); }
+
+    .ratio-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 0.9rem; margin: 1rem 0 1.5rem;
+    }
+    .ratio-card {
+      border: 1px solid var(--border); border-radius: 0.75rem; padding: 0.9rem 1rem;
+      background: var(--card-bg);
+    }
+    .ratio-card h3 { margin: 0 0 0.6rem; font-size: 0.95rem; }
+    .ratio-condition { padding: 0.5rem 0; }
+    .ratio-condition + .ratio-condition { border-top: 1px solid #8881; }
+    .ratio-condition.ratio-ns { opacity: 0.55; }
+    .ratio-condition-label {
+      font-weight: 600; font-size: 0.82rem; text-transform: capitalize;
+      margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.4rem;
+    }
+    .ns-tag {
+      font-size: 0.65rem; font-weight: 700; padding: 0.05rem 0.4rem; border-radius: 0.6rem;
+      background: #8883; text-transform: uppercase; letter-spacing: 0.02em;
+    }
+    .ratio-stat { font-size: 0.82rem; display: flex; gap: 0.4rem; align-items: baseline; padding: 0.1rem 0; }
+    .ratio-stat-name { width: 6.5em; flex-shrink: 0; opacity: 0.7; }
+    .ratio-stat-value { font-weight: 600; }
+    .ratio-bar-row { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.3rem; }
+    .ratio-bar-track {
+      position: relative; flex: 1; height: 8px; border-radius: 4px; background: #8882;
+    }
+    .ratio-bar-fill { height: 100%; border-radius: 4px; }
+    .ratio-bar-ref {
+      position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px;
+      background: currentColor; opacity: 0.4;
+    }
+    .ratio-transfer-cost { margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px solid var(--border); font-size: 0.78rem; }
+  </style>
+</head>
+<body>
+  <nav>
+    <span class="brand">GRF Muscle Prediction</span>
+    <a href="/">Results</a>
+    <a href="/predict">Predict</a>
+    <a href="/datasets">Datasets</a>
+    <a href="/metrics">Metrics</a>
+    <a href="/about">About</a>
+    <a href="/docs">API docs</a>
+  </nav>
+  {% block content %}{% endblock %}
+  <script>
+    function switchOutputChart(select) {
+      var block = select.closest('.output-block');
+      block.querySelectorAll('.output-panel').forEach(function (panel) {
+        panel.style.display = (panel.id === select.value) ? '' : 'none';
+      });
+      var filterInput = block.querySelector('.output-filter');
+      if (filterInput.value) filterOutputRows(filterInput);
+    }
+
+    function filterOutputRows(input) {
+      var block = input.closest('.output-block');
+      var term = input.value.toLowerCase();
+      var panel = block.querySelector('.output-panel:not([style*="none"])');
+      if (!panel) return;
+      panel.querySelectorAll('.output-row').forEach(function (row) {
+        row.style.display = row.dataset.key.indexOf(term) !== -1 ? '' : 'none';
+      });
+    }
+
+    // "Pin" is purely visual/in-page -- nothing is written to disk. It just
+    // clones the currently visible panel (which already reflects the current
+    // metric + filter, since filtering sets inline styles on the real DOM
+    // nodes) into a standalone card, so switching the dropdown/filter to look
+    // at something else doesn't lose the view you just built.
+    function saveOutputChart(button) {
+      var block = button.closest('.output-block');
+      var select = block.querySelector('.output-select');
+      var filterInput = block.querySelector('.output-filter');
+      var panel = block.querySelector('.output-panel:not([style*="none"])');
+      if (!panel) return;
+
+      var card = document.createElement('div');
+      card.className = 'pinned-chart';
+
+      var header = document.createElement('div');
+      header.className = 'pinned-chart-header';
+
+      var title = document.createElement('span');
+      title.className = 'pinned-chart-title';
+      var metricLabel = select.options[select.selectedIndex].text;
+      title.textContent = filterInput.value
+        ? metricLabel + ' — "' + filterInput.value + '"'
+        : metricLabel;
+
+      var removeBtn = document.createElement('button');
+      removeBtn.className = 'pinned-chart-remove';
+      removeBtn.type = 'button';
+      removeBtn.setAttribute('aria-label', 'Remove pinned chart');
+      removeBtn.textContent = '×';
+      removeBtn.onclick = function () { card.remove(); };
+
+      header.appendChild(title);
+      header.appendChild(removeBtn);
+      card.appendChild(header);
+
+      // Aggregate: mean value per model across the currently VISIBLE
+      // (filtered) rows -- so pinning "rrmse filtered to tib" gives one
+      // number per model, not just a bar list to eyeball.
+      var legendClone = panel.querySelector('.output-legend').cloneNode(true);
+      var modelNames = Array.prototype.map.call(
+        legendClone.querySelectorAll('.legend-item'),
+        function (el) { return el.textContent.trim(); },
+      );
+      var visibleRows = Array.prototype.filter.call(
+        panel.querySelectorAll('.output-row'),
+        function (row) { return row.style.display !== 'none'; },
+      );
+      if (visibleRows.length && modelNames.length) {
+        var sums = modelNames.map(function () { return 0; });
+        var counts = modelNames.map(function () { return 0; });
+        visibleRows.forEach(function (row) {
+          row.querySelectorAll('.output-bar-value').forEach(function (span, i) {
+            var v = parseFloat(span.textContent);
+            if (!isNaN(v)) { sums[i] += v; counts[i] += 1; }
+          });
+        });
+        var agg = document.createElement('div');
+        agg.className = 'pinned-chart-agg';
+        agg.textContent = 'mean of ' + visibleRows.length + ' shown: ' + modelNames.map(
+          function (name, i) {
+            return name + '=' + (counts[i] ? (sums[i] / counts[i]).toFixed(4) : '—');
+          },
+        ).join('  ·  ');
+        card.appendChild(agg);
+      }
+
+      card.appendChild(legendClone);
+      card.appendChild(panel.querySelector('.output-chart').cloneNode(true));
+
+      var pinnedSection = document.getElementById('pinned-output-charts');
+      document.getElementById('pinned-output-grid').appendChild(card);
+      pinnedSection.style.display = '';
+    }
+
+    // Live per-subject predictions run real inference and can take up to
+    // about a minute -- a plain <a href> navigation to that same URL would
+    // leave the browser showing this unchanged page (with only its loading
+    // spinner as any indication) for the whole wait, which reads as broken.
+    // Fetching in place instead lets an immediate "computing..." message
+    // show right away.
+    function loadLivePredictions(link, href) {
+      var container = link.closest('.ratio-predictions-container');
+      container.innerHTML = '<p class="muted">computing live predictions — '
+        + 'this can take up to a minute…</p>';
+      fetch(href)
+        .then(function (resp) {
+          if (!resp.ok) throw new Error('request failed');
+          return resp.text();
+        })
+        .then(function (html) { container.innerHTML = html; })
+        .catch(function () {
+          var p = document.createElement('p');
+          p.className = 'predict-error';
+          p.textContent = 'Failed to load live predictions — try reloading the page.';
+          container.innerHTML = '';
+          container.appendChild(p);
+        });
+    }
+  </script>
+</body>
+</html>

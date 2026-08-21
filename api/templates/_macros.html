@@ -1,0 +1,16 @@
+{% macro render_value(value, key=none) %}
+{%- if value is mapping -%}
+  <table class="nested">
+    {% for k, v in value.items() %}<tr><th>{{ k }}</th><td>{{ render_value(v, k) }}</td></tr>{% endfor %}
+  </table>
+{%- elif value is sequence and value is not string -%}
+  {%- set joined = value | scalarlist -%}
+  {%- if joined is not none -%}
+    {{ joined }}
+  {%- else -%}
+    <ul class="nested-list">{% for item in value %}<li>{{ render_value(item, key) }}</li>{% endfor %}</ul>
+  {%- endif -%}
+{%- else -%}
+  {{ value | fmt_unit(key) }}
+{%- endif -%}
+{% endmacro %}

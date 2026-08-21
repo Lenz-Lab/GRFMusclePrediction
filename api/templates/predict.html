@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Predict{% endblock %}
+{% block content %}
+  <h1>Run a model</h1>
+  <p class="tagline">Load an existing model and test set to run prediction</p>
+
+  <form class="filters predict-form" method="get">
+    <select name="pth">
+      <option value="">— select a model (.pth) —</option>
+      {% for f in pth_files %}
+        <option value="{{ f }}" {% if f == selected.pth %}selected{% endif %}>{{ f }}</option>
+      {% endfor %}
+    </select>
+    <select name="npz">
+      <option value="">— select test data (.npz) —</option>
+      {% for f in npz_files %}
+        <option value="{{ f }}" {% if f == selected.npz %}selected{% endif %}>{{ f }}</option>
+      {% endfor %}
+    </select>
+    <select name="output_key">
+      {% if subset_output_keys is not none %}
+        <optgroup label="Reported subset">
+          {% for k in output_keys if k in subset_output_keys %}
+            {% set sel = 'selected' if k == selected.output_key else '' %}
+            <option value="{{ k }}" {{ sel }}>{{ k }}</option>
+          {% endfor %}
+        </optgroup>
+        <optgroup label="All outputs">
+          {% for k in output_keys if k not in subset_output_keys %}
+            {% set sel = 'selected' if k == selected.output_key else '' %}
+            <option value="{{ k }}" {{ sel }}>{{ k }}</option>
+          {% endfor %}
+        </optgroup>
+      {% else %}
+        {% for k in output_keys %}
+          {% set sel = 'selected' if k == selected.output_key else '' %}
+          <option value="{{ k }}" {{ sel }}>{{ k }}</option>
+        {% endfor %}
+      {% endif %}
+    </select>
+    <input type="number" name="sample_idx" value="{{ selected.sample_idx }}" min="0" style="width:6em">
+    {% for r in run_links %}<input type="hidden" name="runs" value="{{ r.raw }}">{% endfor %}
+    <button type="submit">Run</button>
+  </form>
+
+  {% if error %}
+    <p class="predict-error">{{ error }}</p>
+  {% endif %}
+
+  {% if result %}
+    <h2>{{ result.chosen_output }} — sample {{ result.sample_idx }} of {{ result.n_samples - 1 }}</h2>
+    <div class="predict-nav">
+      <a {% if not result.prev_href %}class="disabled"{% endif %}
+         href="{{ result.prev_href or '#' }}">&larr; prev</a>
+      <a {% if not result.next_href %}class="disabled"{% endif %}
+         href="{{ result.next_href or '#' }}">next &rarr;</a>
+      {% if add_run_href %}
+        <a class="pin-run" href="{{ add_run_href }}">add this model/data to comparison</a>
+      {% endif %}
+    </div>
+    {{ result.chart_svg | safe }}
+    {% if result.in_subset %}
+      <p class="muted">
+        shaded region — overlap between ground truth and prediction (see
+        <a href="/metrics#auc">AUC</a>)
+      </p>
+    {% else %}
+      <p class="muted">
+        {{ result.chosen_output }} isn't part of the standard reported subset for this
+        dataset version — overlap shading only shows for subset outputs.
+      </p>
+    {% endif %}
+
+    <h2>Test-set summary ({{ result.n_samples }} samples, all outputs)</h2>
+    <table class="nested">
+      <tr><th>rrmse_w</th><td>{{ result.stats.rrmse_w | fmt }}</td></tr>
+      <tr><th>r2_mean</th><td>{{ result.stats.r2_mean | fmt }}</td></tr>
+      <tr><th>auc_mean</th><td>{{ result.stats.auc_mean | fmt }}</td></tr>
+      <tr><th>mae_overall</th><td>{{ result.stats.mae_overall | fmt_unit('mae_overall') }}</td></tr>
+    </table>
+  {% elif not error %}
+    <p class="muted">Pick a model and test-data file, then Run.</p>
+  {% endif %}
+
+  {% if run_links %}
+    <h2>Comparing</h2>
+    <div class="run-chips">
+      {% for r in run_links %}
+        <span class="run-chip">{{ r.label }} <a href="{{ r.remove_href }}" title="remove">&times;</a></span>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if run_errors %}
+    {% for e in run_errors %}<p class="predict-error">{{ e }}</p>{% endfor %}
+  {% endif %}
+
+  {% include "_model_comparison.html" %}
+{% endblock %}

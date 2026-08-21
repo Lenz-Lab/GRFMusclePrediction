@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block title %}{{ info.version }}{% endblock %}
+{% block content %}
+  <p><a href="/datasets">&larr; all datasets</a></p>
+  <h1>{{ info.version }}</h1>
+  <p class="muted">{{ info.date | fmt }}</p>
+  <p>{{ info.description | fmt }}</p>
+  {% if info.extra %}
+    <h2>Details</h2>
+    {{ m.render_value(info.extra) }}
+  {% endif %}
+{% endblock %}

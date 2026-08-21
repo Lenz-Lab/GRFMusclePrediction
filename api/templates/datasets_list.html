@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Datasets{% endblock %}
+{% block content %}
+  <h1>Datasets</h1>
+  {% if datasets %}
+    <table>
+      <tr><th>Dataset</th><th>Active version</th><th>Versions</th></tr>
+      {% for d in datasets %}
+      <tr>
+        <td>{{ d.dataset }}</td>
+        <td>{{ d.active_version | fmt }}</td>
+        <td>
+          {% for v in d.versions %}<a href="/datasets/{{ d.dataset }}/versions/{{ v }}">v{{ v }}</a>{% if not loop.last %} · {% endif %}{% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="muted">No dataset version docs found in <code>versions/</code>.</p>
+  {% endif %}
+{% endblock %}

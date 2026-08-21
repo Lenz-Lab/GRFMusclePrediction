@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Results{% endblock %}
+{% block content %}
+  <h1>Evaluation results</h1>
+  <p class="tagline">Browse existing metrics docs</p>
+
+  <form class="filters" method="get">
+    <input type="text" name="dataset" placeholder="dataset" value="{{ filters.dataset or '' }}">
+    <input type="text" name="stratum" placeholder="stratum" value="{{ filters.stratum or '' }}">
+    <input type="text" name="eval_type" placeholder="eval_type" value="{{ filters.eval_type or '' }}">
+    <button type="submit">Filter</button>
+    {% if filters.dataset or filters.stratum or filters.eval_type %}<a href="/">clear</a>{% endif %}
+  </form>
+
+  {% if results %}
+    <div class="card-grid">
+      {% for r in results %}
+      <a class="card" href="/results/{{ r.id }}">
+        <span class="pill pill-{{ r.eval_type }}">{{ r.eval_type }}</span>
+        <h3>{{ r.id }}</h3>
+        <div class="meta">
+          {{ r.dataset | fmt }} · {{ r.dataset_version | fmt }}
+          {% if r.stratum %} · {{ r.stratum }}{% endif %} · {{ r.date | fmt }}
+        </div>
+        {% if r.chart_svg %}
+          {{ r.chart_svg | safe }}
+          {% if r.metric_caption %}
+            <div class="metric-caption">{{ r.metric_caption }}</div>
+          {% endif %}
+        {% else %}
+          <div class="muted">{{ r.model_names | join(', ') }}</div>
+        {% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">
+      No results yet in <code>results/metrics/</code>{% if filters.dataset or filters.stratum or filters.eval_type %} matching these filters{% endif %}.
+      Run the "Save versioned metrics" cell at the bottom of <code>Compare_Models.ipynb</code>
+      or <code>CrossVal.ipynb</code> to add some — this page picks them up automatically,
+      no restart needed.
+    </p>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}Metrics{% endblock %}
+{% block content %}
+  <h1>Metrics</h1>
+  <p class="tagline">what the numbers on this site are actually asking.</p>
+
+  <section id="reconstruction-accuracy">
+    <h2>Reconstruction accuracy</h2>
+    <p class="muted">
+      How closely a model's predicted force/moment curves match the
+      ground-truth (static-optimization) curves for the same trial.
+    </p>
+    <table class="nested">
+      <tr>
+        <th>RRMSE (weighted)</th>
+        <td>
+          Root-mean-square error, normalized by each output's signal range
+          and averaged with larger-range outputs weighted more heavily.
+          0 is perfect; lower is better. The default headline metric across
+          the site because it stays well-behaved even on low-variance
+          outputs, unlike R&sup2;.
+        </td>
+      </tr>
+      <tr>
+        <th>R&sup2;</th>
+        <td>
+          Fraction of variance in the ground truth explained by the
+          prediction. 1.0 is perfect, 0 means "no better than predicting the
+          mean," and it can go arbitrarily negative on a small or
+          low-variance test set — a single atypical held-out subject can
+          drag it far below zero without the model actually being bad.
+          Report alongside RRMSE, not instead of it.
+        </td>
+      </tr>
+      <tr>
+        <th>Dice coefficient</th>
+        <td>
+          Continuous-curve overlap between predicted and true signals
+          (borrowed from image-segmentation overlap metrics, adapted for
+          non-negative force curves). 1.0 is perfect overlap.
+        </td>
+      </tr>
+      <tr id="auc">
+        <th>AUC (integral agreement)</th>
+        <td>
+          Trapezoidal overlap coefficient: integral of
+          min(true, predicted) over integral of max(true, predicted),
+          bounded [0, 1] with 1.0 = perfect overlap. Conceptually close to
+          Dice but a distinct construction (integrates over time rather than
+          summing samples pointwise — see
+          <code>eval_utils.calc_auc_per_output</code>), kept separate rather
+          than treated as a rescaled Dice. On the <a href="/predict">Predict</a>
+          page, the shaded region between the ground-truth and predicted
+          curves is the visual version of this same question — how much of
+          the two curves actually overlap — for outputs in the standard
+          reported subset (see below); it isn't a pixel-exact rendering of
+          the trapezoidal ratio, just the same idea made visible.
+        </td>
+      </tr>
+      <tr>
+        <th>MAE</th>
+        <td>Mean absolute error, in the signal's native units (N or N/kg). 0 is perfect.</td>
+      </tr>
+    </table>
+    <div class="ratio-callout ratio-callout-howto">
+      <strong>Why both R&sup2; and RRMSE?</strong>
+      <p>
+        They can disagree, and when they do, RRMSE is the one to trust.
+        R&sup2; normalizes by signal <em>variance</em>, so on a compressed or
+        low-variance test set (a single atypical subject, a retention-stratum
+        trial) it can swing to large negative values that look catastrophic
+        but reflect the test set's variance, not the model's accuracy. RRMSE
+        normalizes by signal <em>range</em> instead, so it stays well-behaved
+        in exactly the cases where R&sup2; gets fragile. Both are reported
+        because they answer different questions; RRMSE is the tiebreaker.
+      </p>
+    </div>
+    <p class="muted">
+      Every result also distinguishes the <strong>full output set</strong>
+      (all muscles/joints the model predicts, <code>signals.outputs</code>
+      in <code>config.yaml</code>) from the <strong>reported subset</strong>
+      (<code>reporting.primary_outputs</code>, or a version-specific override
+      like <code>V1_outputs</code> — see a result's <code>subset</code>
+      field). The subset exists because not every predicted output is part
+      of this project's clinical narrative: <code>addmagMid</code> (adductor
+      magnus, middle segment), for instance, is computed and available in
+      every per-output breakdown, but isn't part of the standard reported
+      subset — it isn't relevant to the knee/ankle JRF or gastroc:soleus
+      questions this project is actually built around. Per-output charts
+      still show it; the subset just isn't built to headline it.
+    </p>
+  </section>
+
+  <section id="ratio-recovery">
+    <h2>Cross-stratum transfer &amp; ratio recovery</h2>
+    <p>
+      Uhlrich et al. (2022) found a biofeedback intervention shifted the
+      gastrocnemius:soleus force ratio between baseline and retention — less
+      gastroc, more soleus, after training. Can a model reproduce that shift?
+    </p>
+    <p>
+      Three training regimes are compared: base-trained and ret-trained each
+      see one condition and are evaluated cold on the other; pooled-trained
+      sees both, so it has no cold-transfer gap and serves as a reference
+      point. All three estimate the same shift — they aren't a direction pair
+      like the reconstruction table above (pooled-trained has no mirror row).
+    </p>
+    <p>
+      RRMSE staying flat across conditions doesn't mean the ratio shift
+      survived — a model can reconstruct curves fine while missing the shift
+      entirely. That's what the stats below check.
+    </p>
+
+    <div class="ratio-callout">
+      <strong>gasmed-only, not "gastrocnemius" generally</strong>
+      <p>
+        Elsewhere on this site (per-output charts, the full output set) you'll
+        see <code>gaslat</code> and <code>gasmed</code> as two separate
+        muscle outputs, and sometimes a combined "gastrocnemius" figure that
+        sums both heads. The ratio used here is <strong>not</strong> that
+        combined figure — it's <code>gasmed</code> (medial gastrocnemius)
+        alone, matching Uhlrich et al.'s Eq. 3 and
+        <code>Gastroc_Soleus_Activation_Ratio.ipynb</code>'s ground truth
+        exactly. Every saved transfer result carries its own
+        <code>ratio_definition</code> string stating this explicitly — check
+        it before comparing ratio numbers across files, rather than assuming
+        "gastrocnemius" means the same thing everywhere on the site.
+      </p>
+    </div>
+
+    <table class="nested">
+      <tr>
+        <th>Pearson r</th>
+        <td>
+          Linear correlation between each subject's true ratio shift and the
+          model's predicted shift. Sensitive to outliers and assumes a
+          roughly linear relationship.
+        </td>
+      </tr>
+      <tr>
+        <th>Spearman &rho;</th>
+        <td>
+          Rank correlation only — does a subject with a bigger true shift
+          also get a bigger predicted shift, regardless of exact scale?
+          More robust than Pearson with few subjects, which is why it leads
+          on this site (these experiments run on n=10 subjects — take any
+          single p-value with real caution, and lean on Spearman over
+          Pearson).
+        </td>
+      </tr>
+      <tr>
+        <th>bias &amp; limits of agreement</th>
+        <td>
+          Bland-Altman style: <code>bias</code> is the average signed
+          difference (predicted &minus; true) across subjects — positive
+          means the model systematically under-predicts the shift, i.e.
+          pulls toward "no change" rather than random noise. The limits of
+          agreement (<code>loa_lower</code>/<code>loa_upper</code>) are the
+          range that ~95% of individual subject errors fall within — a
+          measure of scatter around that bias, not just its average.
+        </td>
+      </tr>
+      <tr>
+        <th>spread ratio</th>
+        <td>
+          std(predicted shift) &divide; std(true shift) across subjects — a
+          <strong>completely separate question from correlation</strong>.
+          1.0 means the model reproduces the true shift's magnitude
+          faithfully; well below 1.0 means shifts are compressed toward the
+          group average even if they're correctly <em>ranked</em>. A model
+          can have excellent Spearman &rho; and a poor spread ratio at the
+          same time — that's not a contradiction, it's two different
+          failure/success modes coexisting.
+        </td>
+      </tr>
+      <tr>
+        <th>transfer cost</th>
+        <td>
+          Two cold-transfer costs, at different levels. <code>&Delta;rrmse_w</code>:
+          reconstruction error cost of testing on an unseen condition
+          (rrmse_w_base2ret &minus; rrmse_w_ret2ret). <code>&Delta;bias</code>
+          (<code>ratio_transfer_cost_bias</code>): the same idea for the ratio
+          shift — base-trained.bias &minus; ret-trained.bias. Neither pairs
+          with the reconstruction table's direction rows; both compare two
+          independently cold-generalizing models against each other.
+        </td>
+      </tr>
+    </table>
+
+    <h3>Two worked examples from a real run</h3>
+    <p>
+      LSTM+Attention, base-trained: Spearman &rho;=0.96 (p&lt;0.0001) —
+      near-perfect ranking — but spread ratio=0.32, so the predicted shift is
+      compressed to about a third of true size. Strong rank recovery, weak
+      magnitude fidelity.
+    </p>
+    <p>
+      CNN-LSTM: correlation near zero across all three regimes, not
+      significant — a genuine null result, marked
+      <span class="ns-tag" style="display:inline">n.s.</span> rather than
+      hidden.
+    </p>
+  </section>
+{% endblock %}

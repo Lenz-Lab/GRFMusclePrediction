@@ -1,0 +1,145 @@
+{# Included by result_detail.html when result.eval_type == 'cross_stratum_transfer'.
+   transfer_comparison comes from render.build_transfer_comparison(result.models) --
+   a structurally different shape from _model_comparison.html's table/per_output_charts
+   (models keyed by transfer direction, plus a ratio_recovery block), so it gets its
+   own rendering rather than being forced through the generic path. #}
+{% import "_macros.html" as m %}
+
+{% if ratio_definition %}
+  <div class="ratio-callout">
+    <strong>Gastroc:soleus ratio definition</strong>
+    <p>{{ ratio_definition }}</p>
+  </div>
+{% endif %}
+
+{% if transfer_comparison.rrmse_table %}
+  <h2>Reconstruction accuracy by direction</h2>
+  <p class="muted">
+    direction reads as trained&rarr;tested — e.g. base&rarr;ret is a
+    baseline-trained model evaluated cold on retention data.
+  </p>
+  <table>
+    <tr>
+      <th>direction</th>
+      {% for name in transfer_comparison.model_names %}<th>{{ name }}</th>{% endfor %}
+    </tr>
+    {% for row in transfer_comparison.rrmse_table %}
+    <tr>
+      <td>{{ row.direction | replace('_', ' → ') }}</td>
+      {% for name in transfer_comparison.model_names %}
+        <td>
+          {{ row.by_model.get(name).rrmse_w_mean | fmt }}
+          {% if row.by_model.get(name).rrmse_w_std is not none %}
+            <span class="muted">&plusmn; {{ row.by_model.get(name).rrmse_w_std | fmt }}</span>
+          {% endif %}
+        </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+{% endif %}
+
+{% if transfer_comparison.ratio_cards %}
+  <h2>Ratio recovery</h2>
+  <div class="ratio-callout ratio-callout-howto">
+    <p>
+      Base-trained/ret-trained each see one condition and are tested cold on
+      the other; pooled-trained sees both, with no cold-transfer gap. All
+      three estimate the same shift — not a direction pair like the table
+      above. <a href="/metrics#ratio-recovery">full explanation &rarr;</a>
+    </p>
+    <p>
+      Two separate questions per condition: does it rank subjects correctly
+      (<strong>Spearman &rho;</strong>, the lead stat here), and does it get
+      the shift's magnitude right (<strong>spread ratio</strong> — 1.0 is
+      full fidelity). A model can score well on one, poorly on the other.
+    </p>
+  </div>
+
+  <div class="ratio-grid">
+    {% for card in transfer_comparison.ratio_cards %}
+    <div class="ratio-card" style="border-top: 3px solid {{ card.color }}">
+      <h3>{{ card.model }}</h3>
+      {% for cond in card.conditions %}
+        <div class="ratio-condition {% if not cond.significant %}ratio-ns{% endif %}">
+          <div class="ratio-condition-label">
+            {{ cond.label | replace('_', ' ') }}
+            {% if not cond.significant %}<span class="ns-tag">n.s.</span>{% endif %}
+          </div>
+          <div class="ratio-stat">
+            <span class="ratio-stat-name">Spearman &rho;</span>
+            <span class="ratio-stat-value">{{ cond.spearman_r | fmt }}</span>
+            <span class="muted">(p={{ cond.spearman_p | fmt }})</span>
+          </div>
+          <div class="ratio-stat muted">
+            <span class="ratio-stat-name">Pearson r</span>
+            <span class="ratio-stat-value">{{ cond.pearson_r | fmt }}</span>
+            <span class="muted">(p={{ cond.pearson_p | fmt }})</span>
+          </div>
+          <div class="ratio-stat">
+            <span class="ratio-stat-name">bias</span>
+            <span class="ratio-stat-value">{{ cond.bias | fmt }}</span>
+            <span class="muted">[{{ cond.loa_lower | fmt }}, {{ cond.loa_upper | fmt }}]</span>
+          </div>
+          <div class="ratio-bar-row">
+            <span class="ratio-stat-name">spread ratio</span>
+            <div class="ratio-bar-track">
+              <div class="ratio-bar-fill" style="width: {{ cond.spread_ratio_pct }}%; background: {{ card.color }};"></div>
+              <div class="ratio-bar-ref" title="1.0 = full magnitude fidelity"></div>
+            </div>
+            <span class="ratio-stat-value">{{ cond.spread_ratio | fmt }}</span>
+          </div>
+        </div>
+      {% endfor %}
+      {% if card.transfer_cost %}
+        <div class="ratio-transfer-cost muted">
+          transfer cost — &Delta;bias {{ card.transfer_cost.ratio_transfer_cost_bias | fmt }},
+          &Delta;rrmse_w {{ card.transfer_cost.rrmse_w_transfer_cost | fmt }}
+        </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% if transfer_comparison.ratio_cards %}
+  <h2>Per subject: ground truth vs. predicted</h2>
+  <p class="muted">
+    Each line traces one subject from their baseline ratio to their
+    retention ratio, straight from the real model and real test data. Two
+    lines sloping the same way are telling the same story: model and ground
+    truth agree on <em>which direction</em> the ratio moved. But direction
+    isn't the whole picture — where the endpoints actually land is the
+    <em>magnitude</em> of that shift, and a model can get the slope right
+    while badly under- or over-shooting how far it went. So read each panel
+    in two passes: first the angle (did it move the right way?), then the
+    gap between lines at each end (did it move far enough?).
+  </p>
+  <p class="muted">
+    Only the best-performing model per condition is shown (see legend) —
+    every architecture at once was an unreadable tangle of lines. A
+    red-ringed point marks a subject that was a distinct outlier for its
+    model, not just an ordinary miss. pooled-trained isn't included: no
+    pooled weights are saved to disk yet.
+  </p>
+  <div id="ratio-predictions" class="ratio-predictions-container">
+    <a class="pin-run" href="{{ ratio_predictions_href }}"
+       onclick="loadLivePredictions(this, '{{ ratio_predictions_href }}'); return false;">
+      load live per-subject predictions &rarr;
+    </a>
+    <p class="muted">Takes up to about a minute — larger architectures are slow on CPU.</p>
+  </div>
+{% endif %}
+
+{% if transfer_comparison.rrmse_table %}
+  <h2>Clinical thresholds by direction</h2>
+  {% for row in transfer_comparison.rrmse_table %}
+    {% for name in transfer_comparison.model_names %}
+      {% set clinical = row.by_model.get(name).clinical %}
+      {% if clinical %}
+        <h3>{{ row.direction | replace('_', ' → ') }} — {{ name }}</h3>
+        {{ m.render_value(clinical) }}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+{% endif %}
