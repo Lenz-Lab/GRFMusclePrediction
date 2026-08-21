@@ -397,7 +397,9 @@ def process_grf(input_path: str):
     """
     #load data from file into a header and a dataframe
     with open(input_path, 'r') as f:
-        forces_df = pd.read_csv(f, sep='\t')  
+        for _ in range(4):
+            next(f)
+        forces_df = pd.read_csv(f, sep='\t')
     #compute time column from samples (sampling rate = 2000 hz)
     samples = forces_df.iloc[:, 0].astype(float)
     forces_df.insert(0, 'time', samples / 2000.0)
