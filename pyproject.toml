@@ -37,7 +37,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["grf_pipeline_utils*", "models*"]
+include = ["grf_pipeline_utils*", "models*", "api*"]
 
 [tool.ruff]
 line-length = 100
